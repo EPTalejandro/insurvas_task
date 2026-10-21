@@ -1,0 +1,3 @@
+# Security: don't install package versions published less than 24 h ago
+# (gives the registry time to pull compromised releases).
+minimumReleaseAge: 1440
