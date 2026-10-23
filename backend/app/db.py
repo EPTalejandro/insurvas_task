@@ -34,6 +34,14 @@ def init_db() -> None:
     Base.metadata.create_all(engine)
 
 
+def reset_db() -> None:
+    """Delete every table and recreate them. Destroys all collected data."""
+    from app import models  # noqa: F401
+
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+
+
 def get_session() -> Iterator[Session]:
     with SessionLocal() as session:
         yield session
