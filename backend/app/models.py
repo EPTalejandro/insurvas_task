@@ -17,8 +17,8 @@ class Creator(Base):
     __table_args__ = (UniqueConstraint("platform", "external_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    platform: Mapped[str] = mapped_column(index=True)  # youtube | instagram | threads
-    external_id: Mapped[str]  # YouTube channel id / IG user id / Threads user id
+    platform: Mapped[str] = mapped_column(index=True)  # youtube | instagram | reddit
+    external_id: Mapped[str]  # YouTube channel id / IG user id / Reddit username
     handle: Mapped[str]
     name: Mapped[str]
     url: Mapped[str | None]
@@ -51,7 +51,7 @@ class Post(Base):
     comments: Mapped[int | None]
     shares: Mapped[int | None]
 
-    source: Mapped[str]  # youtube_api | instagram_api | threads_api
+    source: Mapped[str]  # youtube_api | instagram_api | reddit_api
     collected_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     # Filled in by the ranking step.

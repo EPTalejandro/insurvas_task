@@ -1,6 +1,6 @@
 # Competitor Content Intelligence
 
-Collects public content from life insurance agents and agencies (YouTube, Instagram, Threads),
+Collects public content from life insurance agents and agencies (YouTube, Instagram, Reddit),
 labels each post (topic, format, hook), ranks posts by performance, and highlights the best
 content and strongest competitors.
 
