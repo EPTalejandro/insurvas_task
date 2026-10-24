@@ -15,11 +15,6 @@ class Settings(BaseSettings):
     meta_graph_version: str = ""
     ig_user_id: str = ""
     ig_access_token: str = ""
-    reddit_client_id: str = ""
-    reddit_client_secret: str = ""
-    reddit_user_agent: str = ""
-    # Comma-separated subreddits to search; empty = search all of Reddit.
-    reddit_subreddits: str = ""
 
     # Gemini labeling. An empty key means the rules labeler is used.
     gemini_api_key: str = ""

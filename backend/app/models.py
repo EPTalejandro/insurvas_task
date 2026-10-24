@@ -28,15 +28,15 @@ class Competitor(Base):
 
 
 class Creator(Base):
-    """One account on one platform. Reddit authors have no competitor."""
+    """One account on one platform. competitor_id stays empty until the account is linked."""
 
     __tablename__ = "creators"
     __table_args__ = (UniqueConstraint("platform", "external_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     competitor_id: Mapped[int | None] = mapped_column(ForeignKey("competitors.id"), index=True)
-    platform: Mapped[str] = mapped_column(index=True)  # youtube | instagram | reddit
-    external_id: Mapped[str]  # YouTube channel id / IG user id / Reddit username
+    platform: Mapped[str] = mapped_column(index=True)  # youtube | instagram
+    external_id: Mapped[str]  # YouTube channel id / IG user id
     handle: Mapped[str]
     name: Mapped[str]
     url: Mapped[str | None]

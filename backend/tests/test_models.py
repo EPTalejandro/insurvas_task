@@ -41,8 +41,8 @@ def test_post_with_label_and_score_round_trip(session):
     assert saved.views is None
 
 
-def test_reddit_creator_has_no_competitor(session):
-    creator = Creator(platform="reddit", external_id="some_user", handle="u/some_user", name="x")
+def test_creator_can_exist_before_being_linked_to_a_competitor(session):
+    creator = Creator(platform="youtube", external_id="UC9", handle="@new", name="New")
     session.add(creator)
     session.commit()
     assert creator.competitor_id is None
