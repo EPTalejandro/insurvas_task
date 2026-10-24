@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "id": "m4",
+      "caption": "Life insurance is easiest to get when you're young and healthy. Don't wait for the family.",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "like_count": 503,
+      "comments_count": 0,
+      "permalink": "https://www.instagram.com/p/DDD444/",
+      "timestamp": "2026-09-20T18:00:00+0000"
+    },
+    {
+      "id": "m5",
+      "caption": "Planning ahead can make a huge difference for the family.",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "like_count": 900,
+      "comments_count": 5,
+      "permalink": "https://www.instagram.com/p/EEE555/",
+      "timestamp": "2025-05-18T09:00:00+0000"
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "b2",
+      "after": "a2"
+    }
+  }
+}

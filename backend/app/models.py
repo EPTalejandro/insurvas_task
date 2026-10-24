@@ -5,6 +5,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
+HASHTAG_KIND = "hashtag"  # Creator.kind of the placeholder that owns a hashtag's posts
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -42,7 +44,7 @@ class Creator(Base):
     url: Mapped[str | None]
     bio: Mapped[str | None]
     followers: Mapped[int | None]  # None when the platform does not expose it
-    kind: Mapped[str | None]  # agent | agency
+    kind: Mapped[str | None]  # agent | agency | HASHTAG_KIND
     is_relevant: Mapped[bool] = mapped_column(default=True)
     discovered_via: Mapped[str | None]  # the keyword or link that found this account
     # Where the owner says they are (ISO code such as "US"). Often left empty on YouTube.
@@ -81,6 +83,10 @@ class Post(Base):
     shares: Mapped[int | None]
 
     last_collected_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    # Only set for posts whose author is unknown (hashtag results): we judge the caption instead.
+    location_status: Mapped[str | None]  # likely_us | probable_us | unverified | non_us
+    location_evidence: Mapped[str | None]
 
     creator: Mapped[Creator] = relationship(back_populates="posts")
     label: Mapped["Label | None"] = relationship(

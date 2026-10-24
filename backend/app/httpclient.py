@@ -20,8 +20,8 @@ class ApiError(Exception):
         self.status_code = status_code
 
 
-def make_client() -> httpx.Client:
-    return httpx.Client(timeout=20.0)
+def make_client(timeout: float = 20.0) -> httpx.Client:
+    return httpx.Client(timeout=timeout)
 
 
 def get_json(

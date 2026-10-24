@@ -11,10 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import runs
+from app.collectors.posts import upsert_posts
 from app.collectors.youtube_parsers import parse_datetime, parse_video, uploads_playlist_id
 from app.config import Settings
 from app.httpclient import ApiError, get_json
-from app.models import Competitor, Creator, Post, Run
+from app.models import Competitor, Creator, Run
 
 YOUTUBE_API = "https://www.googleapis.com/youtube/v3"
 SEARCH_COST = 100  # quota units; every other call we use costs 1
@@ -81,31 +82,6 @@ def fetch_videos(client: httpx.Client, api_key: str, video_ids: list[str]) -> li
     return get_json(client, f"{YOUTUBE_API}/videos", params).get("items", [])
 
 
-def upsert_posts(
-    session: Session, creator: Creator, parsed: list[dict[str, Any]], now: datetime
-) -> int:
-    """Insert new posts and refresh metrics of known ones. Returns how many were written."""
-    ids = [video["external_id"] for video in parsed]
-    existing = {
-        post.external_id: post
-        for post in session.scalars(
-            select(Post).where(Post.platform == "youtube", Post.external_id.in_(ids))
-        )
-    }
-    for video in parsed:
-        fields = {k: v for k, v in video.items() if k != "channel_id"}
-        post = existing.get(video["external_id"])
-        if post is None:
-            post = Post(creator_id=creator.id, platform="youtube", **fields)
-            session.add(post)
-        else:
-            for name, value in fields.items():
-                setattr(post, name, value)
-        post.last_collected_at = now
-    session.commit()
-    return len(parsed)
-
-
 def collect_youtube(
     session: Session, client: httpx.Client, settings: Settings, now: datetime | None = None
 ) -> Run:
@@ -146,7 +122,7 @@ def collect_youtube(
                 items = fetch_videos(client, settings.youtube_api_key, ids)
                 quota += 1
                 parsed = [video for item in items if (video := parse_video(item))]
-            posts += upsert_posts(session, creator, parsed, now)
+            posts += upsert_posts(session, creator, parsed, now, "youtube")
             accounts_ok += 1
         except ApiError as error:
             accounts_failed += 1

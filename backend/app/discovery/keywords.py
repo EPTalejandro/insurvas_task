@@ -22,16 +22,24 @@ DEFAULT_KEYWORDS: tuple[str, ...] = (
 )
 
 
+# Instagram hashtags (without the #). Instagram allows 30 different hashtags per 7 days.
+DEFAULT_HASHTAGS: tuple[str, ...] = ("lifeinsurance",)
+
+
 def seed_keywords(session: Session) -> int:
     """Insert missing default keywords. Returns how many were added.
 
     Checks before inserting so running `seed` twice does not create duplicates.
     """
-    existing = set(session.scalars(select(Keyword.term)))
+    existing = {
+        (k.term, k.platform) for k in session.execute(select(Keyword.term, Keyword.platform))
+    }
+    wanted = [(term, None) for term in DEFAULT_KEYWORDS]
+    wanted += [(tag, "instagram") for tag in DEFAULT_HASHTAGS]
     added = 0
-    for term in DEFAULT_KEYWORDS:
-        if term not in existing:
-            session.add(Keyword(term=term, platform=None, active=True))
+    for term, platform in wanted:
+        if (term, platform) not in existing:
+            session.add(Keyword(term=term, platform=platform, active=True))
             added += 1
     session.commit()
     return added

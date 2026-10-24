@@ -17,8 +17,22 @@ def test_unknown_platform_is_rejected_before_any_work():
     assert "not available yet" in result.output
 
 
-def test_empty_youtube_key_skips_the_platform(monkeypatch):
+def test_collect_without_any_keys_collects_nothing(monkeypatch):
     monkeypatch.setattr("app.cli.get_settings", lambda: Settings(_env_file=None))
     result = CliRunner().invoke(cli, ["collect"])
     assert result.exit_code == 0
-    assert "YOUTUBE_API_KEY is empty" in result.output
+    assert "No platform has keys" in result.output
+
+
+def test_collecting_a_platform_without_keys_is_an_error(monkeypatch):
+    monkeypatch.setattr("app.cli.get_settings", lambda: Settings(_env_file=None))
+    for name in ("youtube", "instagram"):
+        result = CliRunner().invoke(cli, ["collect", "--platform", name])
+        assert result.exit_code == 1
+        assert f"{name} has no keys" in result.output
+
+
+def test_collecting_an_unknown_platform_is_an_error():
+    result = CliRunner().invoke(cli, ["collect", "--platform", "tiktok"])
+    assert result.exit_code == 1
+    assert "not available" in result.output

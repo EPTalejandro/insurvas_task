@@ -1,0 +1,41 @@
+{
+  "data": [
+    {
+      "id": "m1",
+      "caption": "If you could choose the financial head start you leave your children, what would it be? Ask about IUL in Texas #lifeinsurance",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "like_count": 1800,
+      "comments_count": 320,
+      "permalink": "https://www.instagram.com/p/AAA111/",
+      "timestamp": "2026-10-05T12:00:00+0000"
+    },
+    {
+      "id": "m2",
+      "caption": "The policy is never the interesting part. Call (615) 905-6050 #lifeinsurance",
+      "media_type": "CAROUSEL_ALBUM",
+      "media_product_type": "FEED",
+      "like_count": 2253,
+      "comments_count": 25,
+      "permalink": "https://www.instagram.com/p/BBB222/",
+      "timestamp": "2026-10-09T08:30:00+0000"
+    },
+    {
+      "id": "m3",
+      "caption": "NAMA MANTAN JADI MASALAH Jadi kalau kamu punya polis sekarang coba dibuka lagi.",
+      "media_type": "CAROUSEL_ALBUM",
+      "media_product_type": "FEED",
+      "like_count": 532,
+      "comments_count": 28,
+      "permalink": "https://www.instagram.com/p/CCC333/",
+      "timestamp": "2026-10-01T10:00:00+0000"
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "b1",
+      "after": "a1"
+    },
+    "next": "https://graph.facebook.com/next-page-1"
+  }
+}

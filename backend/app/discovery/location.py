@@ -12,12 +12,13 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Competitor, Creator, Post
+from app.models import HASHTAG_KIND, Competitor, Creator, Post
 
 US = "us"  # the channel says its country is US
 LIKELY_US = "likely_us"  # strong text signals
 UNVERIFIED = "unverified"  # not enough evidence either way
 NON_US = "non_us"
+PROBABLE_US = "probable_us"  # posts only: an English caption with US cues, but no hard proof
 
 # A US-format phone number, or the words licensed US agents put in their bios.
 _PHONE = re.compile(r"\(?\b\d{3}\)?[-. ]\d{3}[-. ]\d{4}\b")
@@ -45,6 +46,23 @@ _US_TERMS = re.compile(
 )
 WEAK_STATE_HITS = 3
 WEAK_TERM_HITS = 5
+
+# --- Captions of posts whose author we cannot see (hashtag results) ---
+_HASHTAG_MENTION_URL = re.compile(r"[#@]\w+|https?://\S+|www\.\S+")
+_ENGLISH_WORDS = re.compile(
+    r"\b(?:the|and|you|your|for|with|that|this|are|have|life|insurance|family|policy|coverage"
+    r"|will|can|get|how|is|of|to|in|it|what|when|why)\b",
+    re.IGNORECASE,
+)
+ENGLISH_MIN_HITS = 3
+LATIN_MIN_RATIO = 0.95
+# One of these is enough: a currency or a place that is not the US.
+_NON_US_PLACES = re.compile(
+    r"₹|£|€|\b(?:India|UK|Nigeria|Kenya|Ghana|Uganda|Philippines|Pakistan|Canada|Australia"
+    r"|Indonesia|Malaysia|Singapore|Dubai|UAE|South Africa|Zimbabwe)\b"
+)
+_US_TIMEZONES = re.compile(r"\b(?:EST|EDT|CST|CDT|MST|MDT|PST|PDT)\b")
+_DOLLARS = re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?")
 
 
 @dataclass(frozen=True)
@@ -83,6 +101,63 @@ def assess_location(country: str | None, bio: str | None, texts: list[str]) -> L
     if states >= WEAK_STATE_HITS or terms >= WEAK_TERM_HITS:
         return Location(UNVERIFIED, f"weak US signals: {states} state names, {terms} US terms")
     return Location(UNVERIFIED, None)
+
+
+def _is_english(text: str) -> bool:
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return False
+    latin = sum(c.isascii() for c in letters) / len(letters)
+    return latin >= LATIN_MIN_RATIO and len(_ENGLISH_WORDS.findall(text)) >= ENGLISH_MIN_HITS
+
+
+def assess_caption(caption: str | None) -> Location:
+    """Judge a hashtag post from its caption alone. Never says `us`: there is no proof."""
+    caption = caption or ""
+    text = _HASHTAG_MENTION_URL.sub(" ", caption)  # tags are English words in any language
+    if not any(c.isalpha() for c in text):
+        return Location(UNVERIFIED, "caption has no text")
+
+    place = _NON_US_PLACES.search(caption)
+    if place:
+        return Location(NON_US, f"non-US marker: {place.group()!r}")
+    indian = _NON_US.findall(caption)
+    if len(indian) >= NON_US_MIN_HITS:
+        return Location(NON_US, f"{len(indian)} Indian-market signals, e.g. {indian[0]!r}")
+
+    # Hard evidence first: a Spanish-language US agent with a license number is still US.
+    phone = _PHONE.search(caption)
+    if phone:
+        return Location(LIKELY_US, f"US phone number {phone.group()}")
+    licence = _LICENSE.search(caption)
+    if licence:
+        return Location(LIKELY_US, f"license mention: {_clean(licence.group())!r}")
+
+    if not _is_english(text):
+        return Location(NON_US, "caption is not in English")
+
+    cues = {m.group().lower() for m in _STATE_NAMES.finditer(caption)}
+    cues |= {m.group().lower() for m in _US_TERMS.finditer(caption)}
+    cues |= {m.group() for m in _DOLLARS.finditer(caption)}
+    cues |= {m.group() for m in _US_TIMEZONES.finditer(caption)}
+    if cues:
+        return Location(PROBABLE_US, f"English caption with US cues: {', '.join(sorted(cues)[:4])}")
+    return Location(UNVERIFIED, "English caption with no US cue")
+
+
+def update_post_locations(session: Session) -> Counter[str]:
+    """Judge the caption of every hashtag post. Returns how many posts are in each status."""
+    posts = session.scalars(
+        select(Post)
+        .join(Creator, Post.creator_id == Creator.id)
+        .where(Creator.kind == HASHTAG_KIND)
+    ).all()
+    for post in posts:
+        location = assess_caption(post.text)
+        post.location_status = location.status
+        post.location_evidence = location.evidence
+    session.commit()
+    return Counter(post.location_status for post in posts)
 
 
 def update_locations(session: Session) -> Counter[str]:

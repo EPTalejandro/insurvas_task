@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     max_competitors: int = 100
     lookback_days: int = 90
     max_posts_per_account: int = 50
+    # Instagram hashtag top posts come 15 per page and each page is slow (12-26 s).
+    hashtag_max_pages: int = 8
 
     @property
     def cors_origin_list(self) -> list[str]:
