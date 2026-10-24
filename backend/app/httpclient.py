@@ -34,12 +34,19 @@ def get_json(
 ) -> Any:
     """GET a URL and return its parsed JSON body.
 
-    Retries rate limits and server errors with exponential backoff.
+    Retries rate limits, server errors and network failures with exponential backoff.
     Raises ApiError when the request still fails.
     """
     for attempt in range(retries + 1):
-        response = client.get(url, params=params)
         is_last_attempt = attempt == retries
+        try:
+            response = client.get(url, params=params)
+        except httpx.TransportError as error:  # timeouts, dropped connections
+            if is_last_attempt:
+                # `from None` keeps the request URL (and its key) out of tracebacks.
+                raise ApiError(0, type(error).__name__) from None
+            time.sleep(backoff_s * 2**attempt)
+            continue
         if response.status_code not in RETRY_STATUSES or is_last_attempt:
             break
         time.sleep(backoff_s * 2**attempt)

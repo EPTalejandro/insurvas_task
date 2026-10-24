@@ -1,0 +1,66 @@
+{
+  "kind": "youtube#channelListResponse",
+  "items": [
+    {
+      "id": "UCagent0001",
+      "snippet": {
+        "title": "Jane Doe - Final Expense Agent",
+        "customUrl": "@janedoefe",
+        "description": "Licensed life insurance agent helping families with final expense and IUL.",
+        "country": "US"
+      },
+      "statistics": {
+        "subscriberCount": "5200",
+        "hiddenSubscriberCount": false
+      }
+    },
+    {
+      "id": "UCagency002",
+      "snippet": {
+        "title": "Sunrise Insurance Agency",
+        "customUrl": "@sunriseagency",
+        "description": "Independent life insurance agency. Term, whole life and annuities."
+      },
+      "statistics": {
+        "subscriberCount": "800",
+        "hiddenSubscriberCount": false
+      }
+    },
+    {
+      "id": "UCcarrier03",
+      "snippet": {
+        "title": "State Farm",
+        "customUrl": "@statefarm",
+        "description": "Official State Farm channel. Insurance, banking and more."
+      },
+      "statistics": {
+        "subscriberCount": "250000",
+        "hiddenSubscriberCount": false
+      }
+    },
+    {
+      "id": "UCgamer0004",
+      "snippet": {
+        "title": "Pixel Quest",
+        "customUrl": "@pixelquest",
+        "description": "Gaming videos every day"
+      },
+      "statistics": {
+        "hiddenSubscriberCount": true
+      }
+    },
+    {
+      "id": "UCindia0005",
+      "snippet": {
+        "title": "Mumbai Life Insurance Agency",
+        "customUrl": "@mumbailife",
+        "description": "Life insurance agency. LIC and term plans for your family.",
+        "country": "IN"
+      },
+      "statistics": {
+        "subscriberCount": "40000",
+        "hiddenSubscriberCount": false
+      }
+    }
+  ]
+}

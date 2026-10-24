@@ -1,0 +1,17 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "vid_short",
+      "snippet": {"channelId": "UCagent0001", "title": "Don&#39;t buy term life until you watch this", "description": "Three mistakes people make.", "publishedAt": "2026-10-20T15:00:00Z", "thumbnails": {"default": {"url": "https://img.test/short_default.jpg"}, "high": {"url": "https://img.test/short_high.jpg"}}, "liveBroadcastContent": "none"},
+      "contentDetails": {"duration": "PT45S"},
+      "statistics": {"viewCount": "12000", "commentCount": "35"}
+    },
+    {
+      "id": "vid_long",
+      "snippet": {"channelId": "UCagent0001", "title": "How final expense works", "description": "A full walkthrough.", "publishedAt": "2026-10-10T09:30:00Z", "thumbnails": {"default": {"url": "https://img.test/long_default.jpg"}}, "liveBroadcastContent": "none"},
+      "contentDetails": {"duration": "PT19M4S"},
+      "statistics": {"viewCount": "9960", "likeCount": "297", "commentCount": "39"}
+    }
+  ]
+}

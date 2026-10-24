@@ -45,6 +45,12 @@ class Creator(Base):
     kind: Mapped[str | None]  # agent | agency
     is_relevant: Mapped[bool] = mapped_column(default=True)
     discovered_via: Mapped[str | None]  # the keyword or link that found this account
+    # Where the owner says they are (ISO code such as "US"). Often left empty on YouTube.
+    country: Mapped[str | None]
+    # us = country is US | likely_us = strong text signals | unverified | non_us
+    location_status: Mapped[str] = mapped_column(default="unverified", index=True)
+    # The proof behind the status, so a person can check it (e.g. "NPN mentioned").
+    location_evidence: Mapped[str | None]
 
     competitor: Mapped[Competitor | None] = relationship(back_populates="creators")
     posts: Mapped[list["Post"]] = relationship(back_populates="creator")

@@ -1,0 +1,55 @@
+{
+  "kind": "youtube#searchListResponse",
+  "items": [
+    {
+      "id": {
+        "videoId": "vid_short"
+      },
+      "snippet": {
+        "channelId": "UCagent0001",
+        "channelTitle": "Jane Doe - Final Expense Agent",
+        "title": "It&#39;s time to talk about final expense"
+      }
+    },
+    {
+      "id": {
+        "videoId": "vid_a2"
+      },
+      "snippet": {
+        "channelId": "UCagency002",
+        "channelTitle": "Sunrise Insurance Agency",
+        "title": "Term vs whole life"
+      }
+    },
+    {
+      "id": {
+        "videoId": "vid_c3"
+      },
+      "snippet": {
+        "channelId": "UCcarrier03",
+        "channelTitle": "State Farm",
+        "title": "Auto and life bundles"
+      }
+    },
+    {
+      "id": {
+        "videoId": "vid_g4"
+      },
+      "snippet": {
+        "channelId": "UCgamer0004",
+        "channelTitle": "Pixel Quest",
+        "title": "Best life insurance themed game?"
+      }
+    },
+    {
+      "id": {
+        "videoId": "vid_i5"
+      },
+      "snippet": {
+        "channelId": "UCindia0005",
+        "channelTitle": "Mumbai Life Insurance Agency",
+        "title": "Best term plan"
+      }
+    }
+  ]
+}

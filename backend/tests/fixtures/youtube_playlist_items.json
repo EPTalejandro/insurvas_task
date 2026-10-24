@@ -1,0 +1,8 @@
+{
+  "kind": "youtube#playlistItemListResponse",
+  "items": [
+    {"contentDetails": {"videoId": "vid_short", "videoPublishedAt": "2026-10-20T15:00:00Z"}},
+    {"contentDetails": {"videoId": "vid_long", "videoPublishedAt": "2026-10-10T09:30:00Z"}},
+    {"contentDetails": {"videoId": "vid_old", "videoPublishedAt": "2026-05-01T09:30:00Z"}}
+  ]
+}

@@ -48,3 +48,17 @@ def test_gives_up_after_retries_and_hides_the_url():
         get_json(client_with(handler), "https://api.test/x?key=SECRET", retries=2, backoff_s=0)
     assert info.value.status_code == 503
     assert "SECRET" not in str(info.value)
+
+
+def test_network_errors_are_retried_then_reported_as_api_errors():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        raise httpx.ConnectTimeout("boom", request=request)
+
+    with pytest.raises(ApiError) as info:
+        get_json(client_with(handler), "https://api.test/x?key=SECRET", retries=2, backoff_s=0)
+    assert len(calls) == 3
+    assert info.value.status_code == 0
+    assert "SECRET" not in str(info.value)
