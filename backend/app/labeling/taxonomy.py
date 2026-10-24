@@ -47,3 +47,16 @@ CTAS: dict[str, str] = {
     "call_or_text": "Call or text a number",
     "none": "No call to action",
 }
+
+# Formats come from the platform's data (not from a labeler), but the list lives here so the
+# API can offer them as filters.
+FORMATS: dict[str, str] = {
+    "short_video": "YouTube video of 3 minutes or less",
+    "long_video": "YouTube video longer than 3 minutes",
+    "reel": "Instagram Reel",
+    "video": "Other video",
+    "image": "Single image",
+    "carousel": "Several images or videos in one post",
+    "text": "Text only",
+    "link": "Link to something else",
+}

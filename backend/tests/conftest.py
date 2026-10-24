@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app import models  # noqa: F401  (registers tables)
+from app.config import Settings, get_settings
 from app.db import Base, get_session
 from app.main import app
 
@@ -30,6 +31,8 @@ def session():
 @pytest.fixture
 def client(session):
     app.dependency_overrides[get_session] = lambda: session
+    # Never read the real .env in tests: it holds real keys.
+    app.dependency_overrides[get_settings] = lambda: Settings(_env_file=None)
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
