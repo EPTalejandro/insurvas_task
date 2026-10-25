@@ -363,3 +363,39 @@ def test_keywords_are_listed_with_their_platform(client, session):
         k for k in items if k["term"] == "lifeinsurance"
     ).items()
     assert any(k["platform"] is None for k in items)
+
+
+# --- serving the built frontend --------------------------------------------------------------
+
+
+def test_the_built_frontend_is_served_after_the_api_routes(tmp_path):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from app.main import mount_frontend
+
+    (tmp_path / "index.html").write_text("<h1>the app</h1>")
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "app.js").write_text("console.log(1)")
+    small = FastAPI()
+
+    @small.get("/api/health")
+    def health():
+        return {"status": "ok"}
+
+    assert mount_frontend(small, tmp_path) is True
+    with TestClient(small) as client:
+        assert client.get("/api/health").json() == {"status": "ok"}  # the API still wins
+        assert "the app" in client.get("/").text
+        assert client.get("/assets/app.js").status_code == 200
+        assert client.get("/api/nothing-here").status_code == 404
+
+
+def test_without_a_build_nothing_is_mounted(tmp_path):
+    from fastapi import FastAPI
+
+    from app.main import mount_frontend
+
+    small = FastAPI()
+    assert mount_frontend(small, tmp_path) is False
+    assert not any(route.name == "frontend" for route in small.routes)
