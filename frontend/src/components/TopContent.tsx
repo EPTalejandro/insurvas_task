@@ -42,6 +42,7 @@ function PostList() {
 
   const hasFilters = Boolean(state.topic || state.hook_type || state.format || state.competitor)
   const competitorName = data?.items[0]?.creator.name ?? `#${state.competitor}`
+  const longerWindow = meta.windows.find((days) => days > state.window)
   const goToPage = (next: number) => {
     setOffset(next)
     window.scrollTo({ top: 0 })
@@ -89,6 +90,21 @@ function PostList() {
         <Empty>
           <p>No ranked posts match these filters in the last {state.window} days.</p>
           {data.too_new > 0 && <p>{data.too_new} newer posts are too new to rank yet.</p>}
+          <div className="state-actions">
+            {(hasFilters || state.platform) && (
+              <button
+                className="link-button"
+                onClick={() => update({ topic: '', hook_type: '', format: '', competitor: null, platform: '' })}
+              >
+                Clear the filters
+              </button>
+            )}
+            {longerWindow && (
+              <button className="link-button" onClick={() => update({ window: longerWindow })}>
+                Show the last {longerWindow} days
+              </button>
+            )}
+          </div>
         </Empty>
       )}
 
@@ -100,8 +116,8 @@ function PostList() {
               ` ${data.too_new} more ${data.too_new === 1 ? 'is' : 'are'} too new to rank yet (under ${meta.thresholds.min_post_age_hours} hours).`}
           </p>
           <div className="post-list">
-            {data.items.map((post) => (
-              <PostCard key={post.id} post={post} />
+            {data.items.map((post, index) => (
+              <PostCard key={post.id} post={post} lead={offset === 0 && index === 0} />
             ))}
           </div>
           <nav className="pager" aria-label="Pages">

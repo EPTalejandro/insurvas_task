@@ -5,7 +5,7 @@ export type Tab = 'content' | 'competitors' | 'insights' | 'sources'
 export type GroupBy = 'hook_type' | 'topic' | 'format'
 
 export const TABS: { id: Tab; label: string }[] = [
-  { id: 'content', label: 'Top Content' },
+  { id: 'content', label: 'Top content' },
   { id: 'competitors', label: 'Competitors' },
   { id: 'insights', label: 'Insights' },
   { id: 'sources', label: 'Sources' },

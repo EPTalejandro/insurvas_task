@@ -27,7 +27,7 @@ export function Insights() {
         does. Groups with fewer than {data?.min_group_size ?? 5} posts are left out.
       </p>
 
-      <div className="segmented" role="toolbar" aria-label="Group by">
+      <div className="options" role="toolbar" aria-label="Group by">
         {GROUPS.map((group) => (
           <AppLink
             key={group.id}

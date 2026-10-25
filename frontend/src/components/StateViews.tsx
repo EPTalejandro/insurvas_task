@@ -2,9 +2,14 @@ import type { ReactNode } from 'react'
 
 export function Loading({ what = 'Loading' }: { what?: string }) {
   return (
-    <p className="state" aria-busy="true">
-      {what}…
-    </p>
+    <div className="state" role="status" aria-busy="true">
+      <p>{what}…</p>
+      <div className="skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
   )
 }
 
@@ -12,8 +17,9 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
   return (
     <div className="state state-error" role="alert">
       <p>
-        <strong>Something went wrong.</strong> {message}
+        <strong>This section did not load.</strong> {message}
       </p>
+      <p>If it keeps failing, check that the backend is running on port 8000.</p>
       {onRetry && (
         <button className="quiet" onClick={onRetry}>
           Try again

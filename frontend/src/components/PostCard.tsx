@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../context.ts'
-import { compactNumber, humanize, relativeTime } from '../format.ts'
+import { compactNumber, humanize, plainReason, relativeTime } from '../format.ts'
 import type { Post } from '../types.ts'
 import { AppLink } from './AppLink.tsx'
 import { LocationBadge, ScoreBadge } from './Badges.tsx'
@@ -42,14 +42,15 @@ function Thumb({ post }: { post: Post }) {
   )
 }
 
-export function PostCard({ post }: { post: Post }) {
+/** `lead` is the best post of a list: it gets the biggest numeral. */
+export function PostCard({ post, lead = false }: { post: Post; lead?: boolean }) {
   const { meta } = useApp()
   const hook = post.title ?? post.label?.hook_text ?? post.text_preview ?? '(no text)'
   const platform = meta.platforms.find((p) => p.id === post.platform)?.label ?? post.platform
   const { label } = post
 
   return (
-    <article className="post">
+    <article className={lead ? 'post post-lead' : 'post'}>
       <ScoreBadge score={post.score.score} />
 
       <div className="post-body">
@@ -77,7 +78,7 @@ export function PostCard({ post }: { post: Post }) {
           <Metric name="likes" value={post.metrics.likes} />
           <Metric name="comments" value={post.metrics.comments} />
           <Metric name="shares" value={post.metrics.shares} />
-          {post.score.reason && <span className="reason">{post.score.reason}</span>}
+          {post.score.reason && <span className="reason">{plainReason(post.score.reason)}</span>}
         </p>
 
         <p className="tags">

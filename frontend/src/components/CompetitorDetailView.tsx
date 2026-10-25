@@ -106,8 +106,8 @@ export function CompetitorDetailView({ id }: { id: number }) {
           ) : (
             <>
               <div className="post-list">
-                {data.top_posts.map((post) => (
-                  <PostCard key={post.id} post={post} />
+                {data.top_posts.map((post, index) => (
+                  <PostCard key={post.id} post={post} lead={index === 0} />
                 ))}
               </div>
               <p className="pager">

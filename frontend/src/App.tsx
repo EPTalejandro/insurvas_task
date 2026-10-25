@@ -19,7 +19,7 @@ export default function App() {
     return (
       <main className="page">
         <h1>Competitor Content Intelligence</h1>
-        <ErrorBox message={`The API is not answering (${error}). Is the backend running?`} onRetry={reload} />
+        <ErrorBox message={`The API did not answer (${error}).`} onRetry={reload} />
       </main>
     )
   }

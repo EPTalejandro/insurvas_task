@@ -28,14 +28,14 @@ export function Header() {
         </nav>
 
         <div className="controls">
-          <div className="segmented" role="toolbar" aria-label="Time window">
+          <div className="options" role="toolbar" aria-label="Time window">
             {meta.windows.map((days) => (
               <button
                 key={days}
                 aria-pressed={days === state.window}
                 onClick={() => update({ window: days })}
               >
-                {days}d
+                {days} days
               </button>
             ))}
           </div>

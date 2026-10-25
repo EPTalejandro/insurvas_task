@@ -44,6 +44,11 @@ export function humanize(id: string | null | undefined): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
+/** The API joins parts of a reason with " · "; the page shows them as plain sentences. */
+export function plainReason(reason: string): string {
+  return reason.split(' · ').join(', ')
+}
+
 export function percent(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`
 }
