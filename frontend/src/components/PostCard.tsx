@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useApp } from '../context.ts'
 import { compactNumber, humanize, relativeTime } from '../format.ts'
 import type { Post } from '../types.ts'
@@ -13,6 +14,34 @@ function Metric({ name, value }: { name: string; value: number | null }) {
   )
 }
 
+/**
+ * The preview image. YouTube links last; Instagram links expire after about 4 days, so a broken
+ * image falls back to a text placeholder instead of an empty box. `no-referrer` keeps the
+ * Instagram CDN from seeing which page shows the image.
+ */
+function Thumb({ post }: { post: Post }) {
+  const [broken, setBroken] = useState(false)
+  if (post.thumbnail_url && !broken) {
+    return (
+      <img
+        src={post.thumbnail_url}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+      />
+    )
+  }
+  return (
+    <span
+      className="thumb-empty"
+      title={post.thumbnail_url ? 'The image link expired. Collect again to renew it.' : undefined}
+    >
+      {humanize(post.format ?? post.platform)}
+    </span>
+  )
+}
+
 export function PostCard({ post }: { post: Post }) {
   const { meta } = useApp()
   const hook = post.title ?? post.label?.hook_text ?? post.text_preview ?? '(no text)'
@@ -22,11 +51,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article className="post-card">
       <a className="thumb" href={post.url} target="_blank" rel="noopener noreferrer">
-        {post.thumbnail_url ? (
-          <img src={post.thumbnail_url} alt="" loading="lazy" />
-        ) : (
-          <span className="thumb-empty">{humanize(post.format ?? post.platform)}</span>
-        )}
+        <Thumb key={post.thumbnail_url ?? post.id} post={post} />
       </a>
 
       <div className="post-body">

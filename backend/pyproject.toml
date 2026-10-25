@@ -5,6 +5,7 @@ description = "Collects, labels and ranks public content from life insurance age
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.159.1",
+    "google-genai>=2.33.0",
     "httpx>=0.28.1",
     "pydantic-settings>=2.16.1",
     "sqlalchemy>=2.1.6",

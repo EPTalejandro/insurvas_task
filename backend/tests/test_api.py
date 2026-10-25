@@ -53,6 +53,7 @@ def test_the_default_window_is_7(client, data):
         {"topic": "nope"},
         {"hook_type": "nope"},
         {"format": "nope"},
+        {"format": "reel"},  # the filter only knows the three groups
         {"limit": 0},
         {"limit": 101},
         {"offset": -1},
@@ -122,10 +123,16 @@ def test_filters_narrow_the_list(client, data):
     assert set(external_ids(client, platform="instagram")) == {"h1", "h2"}
     assert set(external_ids(client, topic="final_expense")) == {"a1", "a2"}
     assert set(external_ids(client, hook_type="warning")) == {"b1", "b2"}
-    assert set(external_ids(client, format="short_video")) == {"a1"}
     assert set(external_ids(client, format="image")) == {"h1", "h2"}
     assert set(external_ids(client, competitor_id=data.bravo.id)) == {"b1", "b2"}
     assert external_ids(client, topic="final_expense", platform="instagram") == []
+
+
+def test_the_format_filter_groups_similar_formats(client, data):
+    # a1 is a short video and a3 a Reel; a2 is a "video" next to the long videos; h2 is a carousel
+    assert set(external_ids(client, format="short_video")) == {"a1", "a3"}
+    assert set(external_ids(client, format="long_video")) == {"a2", "a4", "b1", "b2"}
+    assert set(external_ids(client, format="image")) == {"h1", "h2"}
 
 
 def test_filters_combine(client, data):
@@ -278,6 +285,20 @@ def test_insights_group_by_topic(client, data, small_groups):
     assert groups == {"final_expense": 2, "iul": 2, "term_life": 2}
 
 
+def test_insights_by_format_use_the_same_three_groups(client, data, small_groups):
+    out = client.get("/api/insights", params={"group_by": "format"}).json()
+    assert {g["value"]: g["count"] for g in out["groups"]} == {
+        "long_video": 4,
+        "short_video": 2,
+        "image": 2,
+    }
+    assert out["groups"][0]["label"] in {
+        "Videos longer than 3 minutes",
+        "Videos of 3 minutes or less, and Reels",
+        "Single images and image carousels",
+    }
+
+
 def test_insights_by_format_can_be_limited_to_a_platform(client, data, small_groups):
     out = client.get("/api/insights", params={"group_by": "format", "platform": "instagram"}).json()
     assert [(g["value"], g["count"]) for g in out["groups"]] == [("image", 2)]
@@ -304,7 +325,7 @@ def test_meta_describes_what_the_ui_can_pick(client, data):
     assert "final_expense" in [t["id"] for t in taxonomy["topics"]]
     assert "question" in [h["id"] for h in taxonomy["hooks"]]
     assert "book_call" in [c["id"] for c in taxonomy["ctas"]]
-    assert "short_video" in [f["id"] for f in taxonomy["formats"]]
+    assert [f["id"] for f in taxonomy["formats"]] == ["long_video", "short_video", "image"]
     thresholds = meta["thresholds"]
     assert thresholds["strong_score"] == 90
     assert thresholds["min_posts_by_window"] == {"7": 3, "30": 5, "90": 5}

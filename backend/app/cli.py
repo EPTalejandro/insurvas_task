@@ -6,7 +6,13 @@ from app.discovery.discover import discover_youtube
 from app.discovery.keywords import seed_keywords
 from app.httpclient import make_client
 from app.labeling.service import label_posts
-from app.pipeline import collect_step, enabled_platforms, pick_labeler, refresh
+from app.pipeline import (
+    collect_step,
+    enabled_platforms,
+    pick_labeler,
+    pick_reviewer,
+    refresh,
+)
 from app.ranking.service import rank_all
 
 cli = typer.Typer(help="Competitor Content Intelligence commands.", no_args_is_help=True)
@@ -64,7 +70,9 @@ def discover_command(platform: str | None = typer.Option(None, help="youtube")) 
     if not _youtube_ready(platform):
         raise typer.Exit(code=1 if platform not in (None, "youtube") else 0)
     with SessionLocal() as session, make_client() as client:
-        _report(discover_youtube(session, client, get_settings()))
+        settings = get_settings()
+        run = discover_youtube(session, client, settings, reviewer=pick_reviewer(settings))
+        _report(run)
 
 
 @cli.command("collect")
@@ -87,7 +95,9 @@ def collect_command(
             typer.echo("No platform has keys in .env, so nothing was collected.")
         raise typer.Exit(code=0 if platform is None else 1)
     with SessionLocal() as session, make_client() as client:
-        result = collect_step(session, client, settings, platforms=wanted)
+        result = collect_step(
+            session, client, settings, platforms=wanted, reviewer=pick_reviewer(settings)
+        )
     for run in result.runs:
         _report(run)
     if result.creator_locations:
@@ -98,23 +108,32 @@ def collect_command(
         typer.echo(f"hashtag post locations: {counts}")
 
 
-def _gemini_note() -> None:
+def _labeler_note() -> None:
     settings = get_settings()
-    wants_gemini = settings.labeler == "gemini" or (
-        settings.labeler == "auto" and settings.gemini_api_key
-    )
-    if wants_gemini:
-        typer.echo("The Gemini labeler is not built yet, so the rules labeler is used.")
+    if settings.labeler == "gemini" and not settings.gemini_api_key:
+        typer.echo("LABELER=gemini but GEMINI_API_KEY is empty, so the rules labeler is used.")
 
 
 @cli.command("label")
 def label_command(
     force: bool = typer.Option(False, "--force", help="Relabel every post, even unchanged ones."),
+    limit: int | None = typer.Option(None, help="Label at most this many posts (best first)."),
 ) -> None:
-    """Label new or changed posts."""
-    _gemini_note()
+    """Label new or changed posts (with Gemini when a key is set, otherwise with the rules)."""
+    _labeler_note()
+    settings = get_settings()
+    labeler = pick_labeler(settings)
+    if labeler.name == "gemini":
+        typer.echo(
+            f"Labeling with Gemini ({settings.gemini_model}): 10 posts per request, "
+            f"at most {settings.gemini_rpm} requests a minute. Posts that fail use the rules."
+        )
+
+    def show_progress(done: int, total: int) -> None:
+        typer.echo(f"  {done}/{total} posts labeled")
+
     with SessionLocal() as session:
-        _report(label_posts(session, pick_labeler(get_settings()), force=force))
+        _report(label_posts(session, labeler, force=force, limit=limit, progress=show_progress))
 
 
 @cli.command("rank")
@@ -129,7 +148,7 @@ def refresh_command(
     discover: bool = typer.Option(False, "--discover", help="Also run discovery first."),
 ) -> None:
     """Run collect, label and rank in order."""
-    _gemini_note()
+    _labeler_note()
     settings = get_settings()
     if not enabled_platforms(settings):
         typer.echo("No platform has keys in .env, so collecting is skipped.")

@@ -14,8 +14,18 @@ def media_format(media_type: str | None, product_type: str | None) -> str | None
     return FORMATS.get(media_type or "")
 
 
+def thumbnail_of(item: dict[str, Any]) -> str | None:
+    """A preview image. Photos and carousels have media_url; a video's media_url is the video
+    file, so videos and Reels use thumbnail_url (when the API gives it)."""
+    if item.get("thumbnail_url"):
+        return item["thumbnail_url"]
+    if item.get("media_type") != "VIDEO":
+        return item.get("media_url")
+    return None
+
+
 def parse_media(item: dict[str, Any]) -> dict[str, Any]:
-    """One hashtag media item -> post fields."""
+    """One media item (hashtag result or Business Discovery post) -> post fields."""
     return {
         "external_id": item["id"],
         "url": item["permalink"],
@@ -23,9 +33,9 @@ def parse_media(item: dict[str, Any]) -> dict[str, Any]:
         "text": item.get("caption") or None,
         "published_at": parse_datetime(item.get("timestamp")),
         "format": media_format(item.get("media_type"), item.get("media_product_type")),
-        "thumbnail_url": None,  # media_url links expire after a few days, so we skip them
+        "thumbnail_url": thumbnail_of(item),  # expires in about 4 days; renewed by every collect
         # Unknown stays None: a hidden like count is missing from the response.
-        "views": None,  # not available outside Business Discovery
+        "views": to_int(item.get("view_count")),  # only Reels, only through Business Discovery
         "likes": to_int(item.get("like_count")),
         "comments": to_int(item.get("comments_count")),
         "shares": None,

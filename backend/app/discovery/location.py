@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import HASHTAG_KIND, Competitor, Creator, Post
+from app.discovery.gemini_review import CreatorBrief, GeminiReviewer
+from app.models import HASHTAG_KIND, Creator, Post
 
 US = "us"  # the channel says its country is US
 LIKELY_US = "likely_us"  # strong text signals
@@ -44,6 +45,8 @@ _US_TERMS = re.compile(
     r"\b(?:IRS|401\(?k\)?|Medicare|Social Security|FICO|IUL|final expense|mortgage protection)\b",
     re.IGNORECASE,
 )
+RECENT_POSTS_FOR_REVIEW = 3  # posts shown to Gemini besides the bio
+SAMPLE_CHARS = 150
 WEAK_STATE_HITS = 3
 WEAK_TERM_HITS = 5
 
@@ -160,35 +163,93 @@ def update_post_locations(session: Session) -> Counter[str]:
     return Counter(post.location_status for post in posts)
 
 
-def update_locations(session: Session) -> Counter[str]:
-    """Re-assess accounts without a country using their collected posts.
+def inherited_location(siblings: list[Creator]) -> Location | None:
+    """An account with no evidence can lean on a US-verified account of the same competitor."""
+    for sibling in siblings:
+        if sibling.location_status in (US, LIKELY_US):
+            proof = sibling.location_evidence or sibling.location_status
+            return Location(
+                LIKELY_US, f"same competitor as {sibling.platform} {sibling.handle}: {proof}"
+            )
+    return None
 
-    A non-US account is marked irrelevant and its competitor excluded, so collect and
-    ranking skip it. Returns how many YouTube accounts are in each status.
-    """
-    creators = session.scalars(
-        select(Creator).where(Creator.platform == "youtube", Creator.is_relevant)
+
+def _texts_of(session: Session, creator: Creator) -> list[str]:
+    posts = session.execute(
+        select(Post.title, Post.text).where(Post.creator_id == creator.id)
     ).all()
-    for creator in creators:
-        if creator.country:
-            continue  # the channel's own country was already used by discover
-        posts = session.execute(
-            select(Post.title, Post.text).where(Post.creator_id == creator.id)
+    return [part for post in posts for part in post if part]
+
+
+def _apply(creator: Creator, location: Location) -> None:
+    creator.location_status = location.status
+    creator.location_evidence = location.evidence
+
+
+def _ask_gemini(session: Session, unverified: list[Creator], reviewer: GeminiReviewer) -> None:
+    """A second opinion on the accounts without evidence. Only answers with a real quote count."""
+    briefs = []
+    for creator in unverified:
+        recent = session.execute(
+            select(Post.title, Post.text)
+            .where(Post.creator_id == creator.id)
+            .order_by(Post.published_at.desc())
+            .limit(RECENT_POSTS_FOR_REVIEW)
         ).all()
-        texts = [part for post in posts for part in post if part]
-        location = assess_location(None, creator.bio, texts)
-        creator.location_status = location.status
-        creator.location_evidence = location.evidence
-        if location.status == NON_US:
+        samples = [
+            f"{title or ''}: {(text or '')[:SAMPLE_CHARS]}".strip(": ") for title, text in recent
+        ]
+        briefs.append(CreatorBrief(creator.id, creator.name, creator.bio, samples))
+    verdicts = reviewer.review(briefs)
+    for creator in unverified:
+        verdict = verdicts.get(creator.id)
+        if verdict is None or verdict.united_states == "unknown":
+            continue
+        # Gemini's reading is a judgment, not hard proof like a phone number: probable, not likely.
+        status = PROBABLE_US if verdict.united_states == "yes" else NON_US
+        _apply(creator, Location(status, f"Gemini quoted: {verdict.evidence!r}"))
+
+
+def update_locations(session: Session, reviewer: GeminiReviewer | None = None) -> Counter[str]:
+    """Re-assess the accounts of competitors that have no country, using their collected posts.
+
+    Order: the text rules first, then Gemini for the accounts still unverified, then an account
+    with no evidence can lean on a US-verified account of the same competitor. A non-US account
+    is switched off; its competitor is excluded only when no other account of it is left.
+    Returns how many accounts are in each status.
+    """
+    creators = list(
+        session.scalars(
+            select(Creator).where(Creator.competitor_id.is_not(None), Creator.is_relevant)
+        )
+    )
+    creators.sort(key=lambda creator: (creator.platform != "youtube", creator.id))
+    judged = [creator for creator in creators if not creator.country]  # a country settles it
+
+    for creator in judged:
+        _apply(creator, assess_location(None, creator.bio, _texts_of(session, creator)))
+    if reviewer is not None:
+        unverified = [c for c in judged if c.location_status == UNVERIFIED]
+        if unverified:
+            _ask_gemini(session, unverified, reviewer)
+    for creator in judged:
+        if creator.location_status == UNVERIFIED:
+            siblings = [
+                c for c in creator.competitor.creators if c.id != creator.id and c.is_relevant
+            ]
+            inherited = inherited_location(siblings)
+            if inherited:
+                _apply(creator, inherited)
+    for creator in judged:
+        if creator.location_status == NON_US:
             creator.is_relevant = False
-            if creator.competitor_id is not None:
-                competitor = session.get(Competitor, creator.competitor_id)
-                competitor.status = "excluded"
+            if not any(c.is_relevant for c in creator.competitor.creators):
+                creator.competitor.status = "excluded"
     session.commit()
     return Counter(
         session.scalars(
             select(Creator.location_status).where(
-                Creator.platform == "youtube", Creator.is_relevant
+                Creator.competitor_id.is_not(None), Creator.is_relevant
             )
         )
     )

@@ -1,21 +1,27 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.api_common import PLATFORMS, choice, join_ranked, window_param
 from app.db import get_session
-from app.labeling.taxonomy import FORMATS, HOOKS, TOPICS
+from app.labeling.taxonomy import FORMAT_GROUPS, HOOKS, TOPICS
 from app.models import Label, Post, PostScore
 from app.ranking import config
 from app.schemas import InsightGroup, InsightsOut
 
 router = APIRouter()
 
+# Formats are grouped like the filter: a Reel counts as a short video, a carousel as images.
+FORMAT_GROUP_COLUMN = case(
+    *[(Post.format.in_(formats), key) for key, (_, formats) in FORMAT_GROUPS.items()],
+    else_=None,
+)
+
 # group_by value -> (column to group on, names for the labels)
 GROUPS = {
     "hook_type": (Label.hook_type, HOOKS),
     "topic": (Label.topic, TOPICS),
-    "format": (Post.format, FORMATS),
+    "format": (FORMAT_GROUP_COLUMN, {key: text for key, (text, _) in FORMAT_GROUPS.items()}),
 }
 
 

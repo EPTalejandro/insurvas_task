@@ -9,7 +9,8 @@ import { ErrorBox, Loading } from './StateViews.tsx'
 const LOCATION_HELP: Record<string, string> = {
   us: 'The channel says its country is the US.',
   likely_us: 'No country, but a US phone number, an NPN or "licensed in …" appears in the bio, posts or caption.',
-  probable_us: 'An English caption with US cues: a state, a US product (IUL, Medicare), a $ amount or a US time zone. Hashtag posts only.',
+  probable_us:
+    'A judgment, not hard proof: an English caption with US cues (a state, a US product, a $ amount, a US time zone), or Gemini reading the bio and recent posts and quoting what it saw.',
   unverified: 'Not enough evidence either way. Competitors stay listed with this badge; hashtag posts are not ranked.',
   non_us: 'Another country, a non-US currency, or not in English. Left out.',
 }

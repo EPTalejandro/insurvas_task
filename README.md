@@ -27,6 +27,13 @@ uv run pytest
 uv run ruff check . && uv run ruff format --check .
 ```
 
+## Gemini (optional)
+With `GEMINI_API_KEY` set (and `LABELER` not `rules`), `label` uses Gemini for topic, hook, call to
+action and relevance, and `discover`/`collect` ask it about accounts the rules cannot settle. Without
+a key everything runs on the rules. The free tier allows about 10 requests a minute, so labeling
+all posts takes around 20 minutes; `label --limit 100` does the 100 most engaging posts first.
+Only public post text is sent.
+
 ## API
 Interactive docs at http://localhost:8000/docs. All data endpoints take `window=7|30|90`
 (default 7); anything else is a 422.

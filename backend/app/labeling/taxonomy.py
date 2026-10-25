@@ -48,6 +48,15 @@ CTAS: dict[str, str] = {
     "none": "No call to action",
 }
 
+# What the format filter offers. Stored formats are finer (a Reel is a short video, a carousel is
+# a set of images), but offering both would be redundant, so the filter uses these three groups.
+# group -> (description, stored formats in it)
+FORMAT_GROUPS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "long_video": ("Videos longer than 3 minutes", ("long_video", "video")),
+    "short_video": ("Videos of 3 minutes or less, and Reels", ("short_video", "reel")),
+    "image": ("Single images and image carousels", ("image", "carousel")),
+}
+
 # Formats come from the platform's data (not from a labeler), but the list lives here so the
 # API can offer them as filters.
 FORMATS: dict[str, str] = {

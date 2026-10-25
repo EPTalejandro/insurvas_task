@@ -25,6 +25,10 @@ PAGE_SIZES = (15, 10, 5)
 MEDIA_FIELDS = (
     "id,caption,media_type,media_product_type,like_count,comments_count,permalink,timestamp"
 )
+# Image links. Hashtag media accepts media_url but rejects thumbnail_url (a Reel's preview),
+# while Business Discovery accepts both. The links expire after about 4 days, so every collect
+# renews them.
+HASHTAG_FIELDS = MEDIA_FIELDS + ",media_url"
 
 
 def instagram_enabled(settings: Settings) -> bool:
@@ -35,6 +39,8 @@ def explain(error: ApiError) -> str:
     """A short message for the run log. Error bodies never contain the token."""
     if '"code":190' in str(error):
         return "Instagram access token expired or invalid (code 190): create a new token"
+    if '"code":4,' in str(error):
+        return "Instagram request limit reached (code 4): wait about an hour and collect again"
     return str(error)[:150]
 
 
@@ -62,7 +68,7 @@ def fetch_top_media_page(
 ) -> dict[str, Any]:
     params = {
         "user_id": settings.ig_user_id,
-        "fields": MEDIA_FIELDS,
+        "fields": HASHTAG_FIELDS,
         "limit": page_size,
         "access_token": settings.ig_access_token,
     }
@@ -70,6 +76,47 @@ def fetch_top_media_page(
         params["after"] = after
     # No retries: a page that is too big fails the same way again, and takes 20+ seconds.
     return get_json(client, f"{_root(settings)}/{hashtag_id}/top_media", params, retries=0)
+
+
+# --- Business Discovery: read a public professional account by its handle -------------------------
+
+PROFILE_FIELDS = "id,username,name,biography,website,followers_count,media_count"
+# view_count exists for Reels only
+ACCOUNT_MEDIA_FIELDS = MEDIA_FIELDS + ",view_count,media_url,thumbnail_url"
+ACCOUNT_PAGE_SIZES = (25, 10, 5)  # same "reduce the amount of data" problem as hashtag pages
+
+
+def is_invalid_account(error: ApiError) -> bool:
+    """Business Discovery answers code 110 for a missing account or one that is not professional."""
+    return '"code":110' in str(error)
+
+
+def fetch_profile(client: httpx.Client, settings: Settings, handle: str) -> dict[str, Any]:
+    """Followers, bio and website of an account. Raises ApiError (code 110) if it is not usable."""
+    params = {
+        "fields": f"business_discovery.username({handle}){{{PROFILE_FIELDS}}}",
+        "access_token": settings.ig_access_token,
+    }
+    data = get_json(client, f"{_root(settings)}/{settings.ig_user_id}", params, retries=1)
+    return data["business_discovery"]
+
+
+def fetch_account_page(
+    client: httpx.Client,
+    settings: Settings,
+    handle: str,
+    page_size: int,
+    after: str | None = None,
+) -> dict[str, Any]:
+    """The profile plus one page of media, newest first."""
+    paging = f".limit({page_size})" + (f".after({after})" if after else "")
+    media = f"media{paging}{{{ACCOUNT_MEDIA_FIELDS}}}"
+    params = {
+        "fields": f"business_discovery.username({handle}){{{PROFILE_FIELDS},{media}}}",
+        "access_token": settings.ig_access_token,
+    }
+    data = get_json(client, f"{_root(settings)}/{settings.ig_user_id}", params, retries=0)
+    return data["business_discovery"]
 
 
 def _hashtag_creator(session: Session, tag: str, hashtag_id: str) -> Creator:
@@ -139,7 +186,7 @@ def collect_hashtags(
         except ApiError as error:
             failed += 1
             last_error = explain(error)
-            if "code 190" in last_error:
+            if "code 190" in last_error or "code 4)" in last_error:
                 break  # every other call would fail the same way
             continue
         if hashtag_id is None:
@@ -157,6 +204,8 @@ def collect_hashtags(
         if page_error:
             failed += 1
             last_error = page_error
+            if "code 4)" in page_error:
+                break  # the app is rate limited: more hashtags would only fail too
 
     if failed == 0:
         status = runs.OK

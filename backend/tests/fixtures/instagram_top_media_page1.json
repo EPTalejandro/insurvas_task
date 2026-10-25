@@ -8,7 +8,8 @@
       "like_count": 1800,
       "comments_count": 320,
       "permalink": "https://www.instagram.com/p/AAA111/",
-      "timestamp": "2026-10-05T12:00:00+0000"
+      "timestamp": "2026-10-05T12:00:00+0000",
+      "media_url": "https://cdn.test/m1.jpg"
     },
     {
       "id": "m2",
@@ -18,7 +19,8 @@
       "like_count": 2253,
       "comments_count": 25,
       "permalink": "https://www.instagram.com/p/BBB222/",
-      "timestamp": "2026-10-09T08:30:00+0000"
+      "timestamp": "2026-10-09T08:30:00+0000",
+      "media_url": "https://cdn.test/m2.jpg"
     },
     {
       "id": "m3",
@@ -28,7 +30,8 @@
       "like_count": 532,
       "comments_count": 28,
       "permalink": "https://www.instagram.com/p/CCC333/",
-      "timestamp": "2026-10-01T10:00:00+0000"
+      "timestamp": "2026-10-01T10:00:00+0000",
+      "media_url": "https://cdn.test/m3.jpg"
     }
   ],
   "paging": {

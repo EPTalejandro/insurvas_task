@@ -28,6 +28,7 @@ class Classification:
     kind: str | None  # agent | agency | None when the account is not relevant
     is_relevant: bool
     reason: str
+    unsure: bool = False  # the rules guessed: worth a second opinion
 
 
 def _has(text: str, terms: tuple[str, ...]) -> bool:
@@ -50,7 +51,9 @@ def classify_creator(name: str, bio: str | None) -> Classification:
     if _is_carrier(name_l):
         return Classification(None, False, "insurance carrier")
     if not _has(text, INSURANCE_TERMS):
-        return Classification(None, False, "no insurance terms in name or bio")
+        # "Founder, Legacy Family Life ... hiring agents" has no insurance word but is an agency.
+        sounds_like_sales = _has(text, AGENT_TERMS + AGENCY_TERMS)
+        return Classification(None, False, "no insurance terms in name or bio", sounds_like_sales)
 
     if _has(name_l, AGENCY_TERMS):
         return Classification("agency", True, "agency word in name")
@@ -59,4 +62,4 @@ def classify_creator(name: str, bio: str | None) -> Classification:
     if _has(bio_l, AGENCY_TERMS):
         return Classification("agency", True, "agency word in bio")
     # Most small channels are personal brands, so "agent" is the safe default.
-    return Classification("agent", True, "insurance terms only, assumed agent")
+    return Classification("agent", True, "insurance terms only, assumed agent", unsure=True)

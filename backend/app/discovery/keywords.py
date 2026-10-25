@@ -23,7 +23,15 @@ DEFAULT_KEYWORDS: tuple[str, ...] = (
 
 
 # Instagram hashtags (without the #). Instagram allows 30 different hashtags per 7 days.
-DEFAULT_HASHTAGS: tuple[str, ...] = ("lifeinsurance",)
+DEFAULT_HASHTAGS: tuple[str, ...] = (
+    "lifeinsurance",
+    "insuranceagent",
+    "insurancebroker",
+    "termlifeinsurance",
+    "iul",
+    "healthinsurance",  # mostly off-topic for life insurance: Gemini marks those posts irrelevant
+    "insurancesales",
+)
 
 
 def seed_keywords(session: Session) -> int:

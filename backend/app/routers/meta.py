@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api_common import PLATFORMS, utc
 from app.config import Settings, get_settings
 from app.db import get_session
-from app.labeling.taxonomy import CTAS, FORMATS, HOOKS, TAXONOMY_VERSION, TOPICS
+from app.labeling.taxonomy import CTAS, FORMAT_GROUPS, HOOKS, TAXONOMY_VERSION, TOPICS
 from app.models import Competitor, Label, Post, PostScore, Run
 from app.pipeline import enabled_platforms
 from app.ranking import config
@@ -53,7 +53,7 @@ def get_meta(
             topics=_options(TOPICS),
             hooks=_options(HOOKS),
             ctas=_options(CTAS),
-            formats=_options(FORMATS),
+            formats=_options({key: text for key, (text, _) in FORMAT_GROUPS.items()}),
         ),
         thresholds=ThresholdsOut(
             strong_score=config.STRONG_SCORE,

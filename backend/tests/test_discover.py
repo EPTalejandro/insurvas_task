@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -136,3 +137,135 @@ def test_quota_exceeded_stops_all_searches(session):
     assert fake.calls_to("/search") == 1
     assert run.status == "error"
     assert "quotaExceeded" in run.message
+
+
+# --- Gemini as a second opinion on accounts the rules were unsure about ------------------------
+
+
+def unsure_channels(fake: FakeYouTube) -> None:
+    """Two channels the rules cannot settle: one with no insurance word, one with only a guess."""
+    fake.search["items"] += [
+        {
+            "id": {"videoId": "v-legacy"},
+            "snippet": {"channelId": "UClegacy", "channelTitle": "Peter"},
+        },
+        {"id": {"videoId": "v-tom"}, "snippet": {"channelId": "UCtom", "channelTitle": "Tom Lee"}},
+    ]
+    fake.channels["items"] += [
+        {
+            "id": "UClegacy",
+            "snippet": {
+                "title": "Peter Roberts",
+                "description": "Founder, Legacy Family Life. I'm hiring agents",
+            },
+            "statistics": {"subscriberCount": "64100"},
+        },
+        {
+            "id": "UCtom",
+            "snippet": {"title": "Tom Lee", "description": "Final expense and IUL explained"},
+            "statistics": {"subscriberCount": "9000"},
+        },
+    ]
+
+
+def reviewer_saying(**by_name):
+    """A reviewer whose Gemini answers `by_name` = {account name: kind}."""
+    from app.discovery.gemini_review import GeminiReviewer
+    from app.gemini_client import GeminiJson
+    from tests.gemini_fake import Clock, FakeGemini
+
+    def answer(prompt):
+        found = [json.loads(line) for line in prompt.splitlines() if line.startswith("{")]
+        return [
+            {
+                "creator_id": a["creator_id"],
+                "kind": by_name[a["name"]],
+                "united_states": "unknown",
+                "evidence": "",
+            }
+            for a in found
+            if a["name"] in by_name
+        ]
+
+    fake = FakeGemini(answer)
+    clock = Clock()
+    return GeminiReviewer(GeminiJson(fake, "m", 10, sleep=clock.sleep, clock=clock.clock)), fake
+
+
+def test_without_a_reviewer_the_rules_decide(session):
+    add_keywords(session, "life insurance agent")
+    fake = FakeYouTube()
+    unsure_channels(fake)
+
+    run_discover(session, fake)
+
+    creators = {c.name: c for c in session.scalars(select(Creator))}
+    assert creators["Peter Roberts"].is_relevant is False  # no insurance word in name or bio
+    assert creators["Tom Lee"].is_relevant is True
+    assert creators["Tom Lee"].kind == "agent"  # the rules' default guess
+
+
+def test_gemini_can_rescue_and_reject_accounts_the_rules_were_unsure_about(session):
+    add_keywords(session, "life insurance agent")
+    fake = FakeYouTube()
+    unsure_channels(fake)
+    reviewer, gemini = reviewer_saying(**{"Peter Roberts": "agency", "Tom Lee": "other"})
+
+    discover_youtube(session, fake.client(), make_settings(), now=NOW, reviewer=reviewer)
+
+    creators = {c.name: c for c in session.scalars(select(Creator))}
+    assert (creators["Peter Roberts"].is_relevant, creators["Peter Roberts"].kind) == (
+        True,
+        "agency",
+    )
+    assert (creators["Tom Lee"].is_relevant, creators["Tom Lee"].kind) == (False, None)
+    names = {c.name for c in session.scalars(select(Competitor))}
+    assert "Peter Roberts" in names  # a rescued account becomes a competitor
+    assert "Tom Lee" not in names
+
+
+def test_only_unsure_accounts_are_sent_to_gemini(session):
+    add_keywords(session, "life insurance agent")
+    fake = FakeYouTube()
+    unsure_channels(fake)
+    reviewer, gemini = reviewer_saying()
+
+    discover_youtube(session, fake.client(), make_settings(), now=NOW, reviewer=reviewer)
+
+    sent = [
+        json.loads(line)["name"]
+        for call in gemini.calls
+        for line in call.prompt.splitlines()
+        if line.startswith("{")
+    ]
+    assert sorted(sent) == ["Peter Roberts", "Tom Lee"]  # not the clear agent, agency or carrier
+
+
+def test_when_gemini_gives_no_answer_the_rules_guess_stays(session):
+    from app.discovery.gemini_review import GeminiReviewer
+    from app.gemini_client import GeminiJson
+    from tests.gemini_fake import FakeGemini
+
+    add_keywords(session, "life insurance agent")
+    fake = FakeYouTube()
+    unsure_channels(fake)
+    broken = GeminiReviewer(GeminiJson(FakeGemini(lambda p: RuntimeError("quota")), "m", 10))
+
+    discover_youtube(session, fake.client(), make_settings(), now=NOW, reviewer=broken)
+
+    creators = {c.name: c for c in session.scalars(select(Creator))}
+    assert creators["Peter Roberts"].is_relevant is False
+    assert creators["Tom Lee"].is_relevant is True
+
+
+def test_gemini_cannot_bring_back_a_non_us_channel(session):
+    add_keywords(session, "life insurance agent")
+    fake = FakeYouTube()
+    fake.channels["items"][4]["snippet"]["description"] = "Life insurance agency. Hiring agents"
+    fake.channels["items"][4]["snippet"]["title"] = "Mumbai Team"
+    reviewer, _ = reviewer_saying(**{"Mumbai Team": "agency"})
+
+    discover_youtube(session, fake.client(), make_settings(), now=NOW, reviewer=reviewer)
+
+    mumbai = session.scalars(select(Creator).where(Creator.name == "Mumbai Team")).one()
+    assert (mumbai.country, mumbai.is_relevant) == ("IN", False)

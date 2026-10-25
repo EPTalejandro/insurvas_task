@@ -4,6 +4,8 @@ API itself uses it (to find posts that are too new)."""
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+from sqlalchemy import select
+
 from app.models import Competitor, Creator, Label, Post
 from app.ranking.service import rank_all
 
@@ -108,8 +110,10 @@ def build_dataset(session) -> SimpleNamespace:
     # alpha: 4 posts in the last 7 days, 1 older, 1 posted an hour ago (too new to rank)
     add_post(session, alpha_yt, "a1", days=1, likes=100, topic="final_expense", hook="question",
              format="short_video")  # fmt: skip
-    add_post(session, alpha_yt, "a2", days=2, likes=80, topic="final_expense", hook="statistic")
-    add_post(session, alpha_yt, "a3", days=3, likes=60, topic="iul", hook="question")
+    add_post(session, alpha_yt, "a2", days=2, likes=80, topic="final_expense", hook="statistic",
+             format="video")  # fmt: skip
+    add_post(session, alpha_yt, "a3", days=3, likes=60, topic="iul", hook="question",
+             format="reel")  # fmt: skip
     add_post(session, alpha_yt, "a4", days=4, likes=40, topic="iul", hook="none")
     add_post(session, alpha_yt, "a-old", days=20, likes=70, topic="iul", hook="question")
     add_post(session, alpha_yt, "a-new", hours=1, likes=50, topic="iul", hook="question")
@@ -128,6 +132,8 @@ def build_dataset(session) -> SimpleNamespace:
 
     hashtag_post("h1", 500, "likely_us", "US phone number 615-905-6050", days=2)
     hashtag_post("h2", 300, "probable_us", "English caption with US cues: iul", days=3)
+    h2 = session.scalars(select(Post).where(Post.external_id == "h2")).one()
+    h2.format = "carousel"  # an image group member, like "image"
     hashtag_post("h3", 900, "non_us", "caption is not in English", days=2)
     hashtag_post("h-new", 40, "probable_us", "English caption with US cues: iul", hours=2)
     session.commit()

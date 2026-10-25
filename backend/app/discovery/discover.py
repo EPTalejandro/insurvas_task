@@ -17,6 +17,7 @@ from app.collectors.youtube import (
 from app.collectors.youtube_parsers import parse_channel
 from app.config import Settings
 from app.discovery.classify import classify_creator
+from app.discovery.gemini_review import CreatorBrief, GeminiReviewer
 from app.discovery.location import NON_US, assess_location
 from app.discovery.selection import choose_new_active, discovery_score
 from app.httpclient import ApiError
@@ -66,14 +67,31 @@ def _search_channel_ids(
     return found, quota, failures, last_error
 
 
+def _second_opinion(session: Session, unsure: list[Creator], reviewer: GeminiReviewer) -> None:
+    """Ask Gemini about the accounts the rules only guessed on. No answer: the guess stays."""
+    briefs = [CreatorBrief(creator.id, creator.name, creator.bio) for creator in unsure]
+    verdicts = reviewer.review(briefs)
+    for creator in unsure:
+        verdict = verdicts.get(creator.id)
+        if verdict is None:
+            continue
+        sells_insurance = verdict.kind in ("agent", "agency")
+        creator.kind = verdict.kind if sells_insurance else None
+        creator.is_relevant = sells_insurance and creator.location_status != NON_US
+
+
 def _upsert_creators(
-    session: Session, channels: list[dict], found: dict[str, str]
+    session: Session,
+    channels: list[dict],
+    found: dict[str, str],
+    reviewer: GeminiReviewer | None = None,
 ) -> list[Creator]:
     existing = {
         creator.external_id: creator
         for creator in session.scalars(select(Creator).where(Creator.platform == "youtube"))
     }
     creators = []
+    unsure: list[Creator] = []
     for fields in channels:
         creator = existing.get(fields["external_id"])
         is_new = creator is None
@@ -99,7 +117,11 @@ def _upsert_creators(
         if creator.location_status == NON_US:
             creator.is_relevant = False  # never becomes a competitor
         creators.append(creator)
+        if result.unsure:
+            unsure.append(creator)
     session.flush()
+    if reviewer is not None and unsure:
+        _second_opinion(session, unsure, reviewer)
     return creators
 
 
@@ -134,7 +156,11 @@ def _activate_best_candidates(session: Session, max_competitors: int) -> None:
 
 
 def discover_youtube(
-    session: Session, client: httpx.Client, settings: Settings, now: datetime | None = None
+    session: Session,
+    client: httpx.Client,
+    settings: Settings,
+    now: datetime | None = None,
+    reviewer: GeminiReviewer | None = None,
 ) -> Run:
     now = now or datetime.now(UTC)
     run = runs.start_run(session, "discover", "youtube")
@@ -157,7 +183,7 @@ def discover_youtube(
             if is_quota_error(error):
                 break
 
-    creators = _upsert_creators(session, channels, found)
+    creators = _upsert_creators(session, channels, found, reviewer)
     _link_competitors(session, creators)
     _activate_best_candidates(session, settings.max_competitors)
 

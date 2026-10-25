@@ -8,7 +8,7 @@ from fastapi import HTTPException, Query
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.labeling.taxonomy import FORMATS, HOOKS, TOPICS
+from app.labeling.taxonomy import FORMAT_GROUPS, HOOKS, TOPICS
 from app.models import HASHTAG_KIND, Competitor, Creator, Label, Post, PostScore
 from app.ranking import config
 from app.ranking.scoring import as_utc
@@ -63,7 +63,7 @@ def post_filters(
         platform=choice(platform, PLATFORMS, "platform"),
         topic=choice(topic, TOPICS, "topic"),
         hook_type=choice(hook_type, HOOKS, "hook_type"),
-        format=choice(format, FORMATS, "format"),
+        format=choice(format, FORMAT_GROUPS, "format"),
         competitor_id=competitor_id,
     )
 
@@ -89,7 +89,7 @@ def apply_filters(stmt: Select, filters: PostFilters) -> Select:
     if filters.hook_type:
         stmt = stmt.where(Label.hook_type == filters.hook_type)
     if filters.format:
-        stmt = stmt.where(Post.format == filters.format)
+        stmt = stmt.where(Post.format.in_(FORMAT_GROUPS[filters.format][1]))
     if filters.competitor_id is not None:
         stmt = stmt.where(Creator.competitor_id == filters.competitor_id)
     return stmt

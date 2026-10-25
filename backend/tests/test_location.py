@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from sqlalchemy import select
 
@@ -238,3 +240,248 @@ def test_update_post_locations_is_repeatable(session):
     update_post_locations(session)
 
     assert post.location_status == LIKELY_US
+
+
+# --- Instagram accounts linked to a competitor ---------------------------------------------
+
+
+def add_account(session, competitor, platform, handle, *, bio=None, posts=(), country=None):
+    creator = Creator(
+        competitor=competitor,
+        platform=platform,
+        external_id=handle,
+        handle=handle,
+        name=handle,
+        bio=bio,
+        country=country,
+        kind="agent",
+        location_status="us" if country == "US" else "unverified",
+        location_evidence="channel country: US" if country == "US" else None,
+    )
+    session.add(creator)
+    session.flush()
+    for index, title in enumerate(posts):
+        session.add(
+            Post(
+                creator_id=creator.id,
+                platform=platform,
+                external_id=f"{handle}-{index}",
+                url="https://example.com",
+                title=title,
+            )
+        )
+    session.commit()
+    return creator
+
+
+def test_an_instagram_account_inherits_a_verified_youtube_channel(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    youtube = add_account(session, competitor, "youtube", "@jane", country="US")
+    instagram = add_account(
+        session, competitor, "instagram", "jane_ig", posts=["Why term life matters"]
+    )
+
+    update_locations(session)
+
+    assert instagram.location_status == LIKELY_US
+    assert "same competitor as youtube @jane" in instagram.location_evidence
+    assert "channel country: US" in instagram.location_evidence
+    assert youtube.location_status == US
+
+
+def test_a_youtube_channel_judged_in_the_same_run_can_be_inherited(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    youtube = add_account(session, competitor, "youtube", "@jane", posts=["Call 512-555-0142"])
+    instagram = add_account(session, competitor, "instagram", "jane_ig")
+
+    update_locations(session)
+
+    assert youtube.location_status == LIKELY_US
+    assert instagram.location_status == LIKELY_US
+
+
+def test_an_instagram_account_with_its_own_evidence_keeps_it(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    add_account(session, competitor, "youtube", "@jane", country="US")
+    instagram = add_account(session, competitor, "instagram", "jane_ig", bio="Licensed in Ohio")
+
+    update_locations(session)
+
+    assert instagram.location_status == LIKELY_US
+    assert "license mention" in instagram.location_evidence
+
+
+def test_nothing_is_inherited_from_an_unverified_account(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    add_account(session, competitor, "youtube", "@jane", posts=["Good morning"])
+    instagram = add_account(session, competitor, "instagram", "jane_ig")
+
+    update_locations(session)
+
+    assert instagram.location_status == UNVERIFIED
+    assert instagram.location_evidence is None
+
+
+def test_a_non_us_instagram_account_is_switched_off_but_the_competitor_stays(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    youtube = add_account(session, competitor, "youtube", "@jane", country="US")
+    instagram = add_account(
+        session,
+        competitor,
+        "instagram",
+        "jane_ig",
+        posts=["LIC plan", "₹5 lakh cover", "IRDAI rules"],
+    )
+
+    counts = update_locations(session)
+
+    assert instagram.location_status == NON_US
+    assert instagram.is_relevant is False
+    assert youtube.is_relevant is True
+    assert competitor.status == "active"
+    assert counts == {US: 1}
+
+
+def test_a_competitor_with_no_account_left_is_excluded(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    add_account(session, competitor, "instagram", "jane_ig", posts=["LIC plan", "₹5 lakh", "IRDAI"])
+
+    update_locations(session)
+
+    assert competitor.status == "excluded"
+
+
+def test_hashtag_placeholders_are_not_judged_as_accounts(session):
+    tag = Creator(
+        platform="instagram", external_id="hashtag:1", handle="#x", name="x", kind="hashtag"
+    )
+    session.add(tag)
+    session.commit()
+
+    assert update_locations(session) == {}
+    assert tag.location_status == "unverified"
+
+
+# --- Gemini for the accounts without evidence ----------------------------------------------
+
+
+def gemini_reviewer(answer):
+    from app.discovery.gemini_review import GeminiReviewer
+    from app.gemini_client import GeminiJson
+    from tests.gemini_fake import Clock, FakeGemini
+
+    fake = FakeGemini(answer)
+    clock = Clock()
+    return GeminiReviewer(GeminiJson(fake, "m", 10, sleep=clock.sleep, clock=clock.clock)), fake
+
+
+def verdicts(by_handle):
+    """An answer function: {handle: (united_states, evidence)}."""
+    import json
+
+    def answer(prompt):
+        accounts = [json.loads(line) for line in prompt.splitlines() if line.startswith("{")]
+        out = []
+        for account in accounts:
+            states, evidence = by_handle.get(account["name"], ("unknown", ""))
+            out.append(
+                {
+                    "creator_id": account["creator_id"],
+                    "kind": "agent",
+                    "united_states": states,
+                    "evidence": evidence,
+                }
+            )
+        return out
+
+    return answer
+
+
+def solo(session, handle, bio=None, posts=()):
+    competitor = Competitor(name=handle, kind="agent", status="active")
+    session.add(competitor)
+    return competitor, add_account(session, competitor, "youtube", handle, bio=bio, posts=posts)
+
+
+def test_gemini_settles_an_account_the_rules_could_not(session):
+    competitor, creator = solo(session, "jane", bio="Helping Dallas families protect what matters")
+    reviewer, _ = gemini_reviewer(verdicts({"jane": ("yes", "Helping Dallas families")}))
+
+    update_locations(session, reviewer)
+
+    assert creator.location_status == PROBABLE_US  # a judgment, not hard proof
+    assert creator.location_evidence == "Gemini quoted: 'Helping Dallas families'"
+    assert competitor.status == "active"
+
+
+def test_gemini_saying_no_switches_the_account_off(session):
+    competitor, creator = solo(session, "ravi", bio="Mumbai based advisor for policy holders")
+    reviewer, _ = gemini_reviewer(verdicts({"ravi": ("no", "Mumbai based advisor")}))
+
+    update_locations(session, reviewer)
+
+    assert creator.location_status == NON_US
+    assert creator.is_relevant is False
+    assert competitor.status == "excluded"
+
+
+def test_a_quote_that_is_not_in_the_text_changes_nothing(session):
+    _, creator = solo(session, "jane", bio="Life insurance for families")
+    reviewer, _ = gemini_reviewer(verdicts({"jane": ("yes", "Serving Austin, Texas")}))
+
+    update_locations(session, reviewer)
+
+    assert creator.location_status == UNVERIFIED
+
+
+def test_gemini_only_sees_accounts_the_rules_left_unverified(session):
+    solo(session, "licensed", bio="Licensed in Ohio")  # the rules settle this one
+    solo(session, "quiet", bio="Helping families")
+    reviewer, fake = gemini_reviewer(verdicts({}))
+
+    update_locations(session, reviewer)
+
+    assert len(fake.calls) == 1
+    assert '"name": "quiet"' in fake.calls[0].prompt
+    assert '"name": "licensed"' not in fake.calls[0].prompt
+
+
+def test_gemini_reads_the_bio_and_the_three_latest_posts(session):
+    _, creator = solo(
+        session,
+        "jane",
+        bio="Helping families",
+        posts=["post one", "post two", "post three", "post four"],
+    )
+    for index, post in enumerate(
+        session.scalars(select(Post).where(Post.creator_id == creator.id))
+    ):
+        post.published_at = datetime(2026, 10, 1 + index)
+    session.commit()
+    reviewer, fake = gemini_reviewer(verdicts({}))
+
+    update_locations(session, reviewer)
+
+    prompt = fake.calls[0].prompt
+    assert "Helping families" in prompt
+    assert "post four" in prompt and "post two" in prompt
+    assert "post one" not in prompt  # only the three most recent
+
+
+def test_without_a_gemini_answer_the_account_can_still_inherit(session):
+    competitor = Competitor(name="jane", kind="agent", status="active")
+    session.add(competitor)
+    add_account(session, competitor, "youtube", "@jane", country="US")
+    instagram = add_account(session, competitor, "instagram", "jane_ig", bio="Helping families")
+    broken, _ = gemini_reviewer(lambda prompt: RuntimeError("quota"))
+
+    update_locations(session, broken)
+
+    assert instagram.location_status == LIKELY_US
+    assert "same competitor" in instagram.location_evidence

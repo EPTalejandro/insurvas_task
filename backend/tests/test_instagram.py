@@ -48,12 +48,8 @@ def test_parse_media_maps_the_fields():
     assert post["format"] == "carousel"
     assert post["published_at"] == datetime(2026, 10, 9, 8, 30, tzinfo=UTC)
     # Not available for hashtag posts: unknown, never zero.
-    assert (post["views"], post["shares"], post["title"], post["thumbnail_url"]) == (
-        None,
-        None,
-        None,
-        None,
-    )
+    assert (post["views"], post["shares"], post["title"]) == (None, None, None)
+    assert post["thumbnail_url"] == "https://cdn.test/m2.jpg"
 
 
 def test_parse_media_keeps_hidden_likes_unknown_and_empty_captions_none():
@@ -210,6 +206,20 @@ def test_an_expired_token_stops_the_run_and_never_leaks_the_token(session):
     assert TOKEN not in run.message
 
 
+def test_the_request_limit_stops_the_run_with_a_clear_message(session):
+    add_hashtag(session, "one")
+    add_hashtag(session, "two")
+    fake = FakeInstagram()
+    fake.rate_limited_after_search = True
+
+    run = run_collect(session, fake)
+
+    assert fake.calls_to("ig_hashtag_search") == 1  # the second hashtag is left for later
+    assert run.status == "error"
+    assert "request limit reached" in run.message
+    assert TOKEN not in run.message
+
+
 def test_only_active_instagram_keywords_are_used(session):
     add_hashtag(session, "lifeinsurance")
     add_hashtag(session, "paused", active=False)
@@ -230,3 +240,51 @@ def test_no_hashtags_means_nothing_to_do(session):
     assert run.status == "ok"
     assert run.message == "no hashtags configured"
     assert fake.calls == []
+
+
+# --- thumbnails ------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("item", "expected"),
+    [
+        ({"media_type": "IMAGE", "media_url": "https://cdn/i.jpg"}, "https://cdn/i.jpg"),
+        ({"media_type": "CAROUSEL_ALBUM", "media_url": "https://cdn/c.jpg"}, "https://cdn/c.jpg"),
+        # A Reel: media_url is absent or the video file, the preview is thumbnail_url.
+        ({"media_type": "VIDEO", "thumbnail_url": "https://cdn/t.jpg"}, "https://cdn/t.jpg"),
+        (
+            {
+                "media_type": "VIDEO",
+                "media_url": "https://cdn/v.mp4",
+                "thumbnail_url": "https://cdn/t.jpg",
+            },
+            "https://cdn/t.jpg",
+        ),
+        ({"media_type": "VIDEO", "media_url": "https://cdn/v.mp4"}, None),  # never the video file
+        ({"media_type": "IMAGE"}, None),
+    ],
+)
+def test_thumbnail_of(item, expected):
+    from app.collectors.instagram_parsers import thumbnail_of
+
+    assert thumbnail_of(item) == expected
+
+
+def test_hashtag_posts_get_their_image_link(session):
+    add_hashtag(session)
+    run_collect(session, FakeInstagram())
+
+    posts = {p.external_id: p for p in session.scalars(select(Post))}
+    assert posts["m1"].thumbnail_url == "https://cdn.test/m1.jpg"
+
+
+def test_hashtag_requests_never_ask_for_thumbnail_url(session):
+    # Hashtag media rejects that field, so asking for it would fail every page.
+    add_hashtag(session)
+    fake = FakeInstagram()
+
+    run = run_collect(session, fake)
+
+    assert run.status == "ok"
+    fields = [params["fields"] for name, params in fake.calls if name == "top_media"]
+    assert fields and all("media_url" in f and "thumbnail_url" not in f for f in fields)
