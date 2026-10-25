@@ -45,10 +45,10 @@ function Leaderboard() {
 
       {data && data.items.length > 0 && (
         <div className="table-wrap">
-          <table className="striped">
+          <table>
             <thead>
               <tr>
-                <th>#</th>
+                <th>Rank</th>
                 <th>Competitor</th>
                 <th>Score</th>
                 <th>Posts</th>
@@ -61,16 +61,15 @@ function Leaderboard() {
             <tbody>
               {data.items.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.rank ?? '—'}</td>
+                  <td className="rank">{c.rank ?? '—'}</td>
                   <td>
                     <AppLink patch={{ competitor: c.id }}>
                       <strong>{c.name}</strong>
                     </AppLink>
-                    <br />
                     <small>
-                      {humanize(c.kind)} · {c.accounts.map((a) => platformName(a.platform)).join(', ')}
+                      {humanize(c.kind)} on {c.accounts.map((a) => platformName(a.platform)).join(', ')}
                     </small>
-                    <div className="chips">
+                    <div className="flags">
                       {c.accounts.map((a) => (
                         <LocationBadge key={`${a.platform}-${a.handle}`} location={a.location} />
                       ))}

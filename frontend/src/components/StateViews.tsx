@@ -15,7 +15,7 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
         <strong>Something went wrong.</strong> {message}
       </p>
       {onRetry && (
-        <button className="secondary outline" onClick={onRetry}>
+        <button className="quiet" onClick={onRetry}>
           Try again
         </button>
       )}

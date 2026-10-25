@@ -17,7 +17,7 @@ export default function App() {
   // Nothing can be shown before we know the windows, platforms and labels.
   if (error) {
     return (
-      <main className="container">
+      <main className="page">
         <h1>Competitor Content Intelligence</h1>
         <ErrorBox message={`The API is not answering (${error}). Is the backend running?`} onRetry={reload} />
       </main>
@@ -25,7 +25,7 @@ export default function App() {
   }
   if (!meta) {
     return (
-      <main className="container">
+      <main className="page">
         <Loading what="Loading" />
       </main>
     )
@@ -33,7 +33,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={{ meta, state, update, href }}>
-      <main className="container">
+      <main className="page">
         <Header />
         {state.tab === 'content' && <TopContent />}
         {state.tab === 'competitors' && <Competitors />}

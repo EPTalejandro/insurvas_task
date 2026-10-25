@@ -11,22 +11,24 @@ const PAGE_SIZE = 20
 
 function FilterSelect(props: {
   label: string
+  all: string
   value: string
   options: Option[]
   onChange: (value: string) => void
 }) {
   return (
-    <label>
-      {props.label}
-      <select value={props.value} onChange={(event) => props.onChange(event.target.value)}>
-        <option value="">All</option>
-        {props.options.map((option) => (
-          <option key={option.id} value={option.id} title={option.label}>
-            {humanize(option.id)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      aria-label={props.label}
+      value={props.value}
+      onChange={(event) => props.onChange(event.target.value)}
+    >
+      <option value="">{props.all}</option>
+      {props.options.map((option) => (
+        <option key={option.id} value={option.id} title={option.label}>
+          {humanize(option.id)}
+        </option>
+      ))}
+    </select>
   )
 }
 
@@ -50,37 +52,35 @@ function PostList() {
       <div className="filters">
         <FilterSelect
           label="Topic"
+          all="All topics"
           value={state.topic}
           options={meta.taxonomy.topics}
           onChange={(topic) => update({ topic })}
         />
         <FilterSelect
           label="Hook"
+          all="All hooks"
           value={state.hook_type}
           options={meta.taxonomy.hooks}
           onChange={(hook_type) => update({ hook_type })}
         />
         <FilterSelect
           label="Format"
+          all="All formats"
           value={state.format}
           options={meta.taxonomy.formats}
           onChange={(format) => update({ format })}
         />
-      </div>
-
-      {(state.competitor !== null || hasFilters) && (
-        <p className="active-filters">
-          {state.competitor !== null && (
-            <span className="chip chip-static">Competitor: {competitorName}</span>
-          )}
+        {state.competitor !== null && <span className="tag tag-static">Competitor: {competitorName}</span>}
+        {(state.competitor !== null || hasFilters) && (
           <button
-            className="secondary outline"
+            className="quiet"
             onClick={() => update({ topic: '', hook_type: '', format: '', competitor: null })}
           >
             Clear filters
           </button>
-        </p>
-      )}
+        )}
+      </div>
 
       {error && <ErrorBox message={error} onRetry={reload} />}
       {!error && !data && <Loading what="Loading posts" />}
@@ -106,7 +106,7 @@ function PostList() {
           </div>
           <nav className="pager" aria-label="Pages">
             <button
-              className="secondary outline"
+              className="quiet"
               disabled={offset === 0}
               onClick={() => goToPage(Math.max(0, offset - PAGE_SIZE))}
             >
@@ -116,7 +116,7 @@ function PostList() {
               {offset + 1}–{Math.min(offset + PAGE_SIZE, data.total)} of {data.total}
             </span>
             <button
-              className="secondary outline"
+              className="quiet"
               disabled={offset + PAGE_SIZE >= data.total}
               onClick={() => goToPage(offset + PAGE_SIZE)}
             >

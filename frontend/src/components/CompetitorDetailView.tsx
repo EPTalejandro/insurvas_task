@@ -15,9 +15,9 @@ export function CompetitorDetailView({ id }: { id: number }) {
 
   return (
     <section aria-busy={loading}>
-      <p>
-        <AppLink patch={{ competitor: null }}>← All competitors</AppLink>
-      </p>
+      <AppLink className="back" patch={{ competitor: null }}>
+        All competitors
+      </AppLink>
 
       {error && <ErrorBox message={error} onRetry={reload} />}
       {!error && !data && <Loading what="Loading competitor" />}
@@ -26,22 +26,24 @@ export function CompetitorDetailView({ id }: { id: number }) {
         <>
           <header className="detail-head">
             <h2>{data.competitor.name}</h2>
-            <p>
-              {humanize(data.competitor.kind)}
-              {data.competitor.rank !== null && ` · rank #${data.competitor.rank} in ${state.window} days`}
-              {data.competitor.status !== 'active' && ` · ${humanize(data.competitor.status)}`}
-            </p>
-            {data.competitor.website && (
-              <p>
+            <p className="meta-line">
+              <span>{humanize(data.competitor.kind)}</span>
+              {data.competitor.rank !== null && (
+                <span>
+                  Rank {data.competitor.rank} in {state.window} days
+                </span>
+              )}
+              {data.competitor.status !== 'active' && <span>{humanize(data.competitor.status)}</span>}
+              {data.competitor.website && (
                 <a href={data.competitor.website} target="_blank" rel="noopener noreferrer">
                   {data.competitor.website}
                 </a>
-              </p>
-            )}
+              )}
+            </p>
           </header>
 
-          <div className="grid-2">
-            <article>
+          <div className="panels">
+            <section>
               <h3>Accounts</h3>
               <ul className="plain-list">
                 {data.competitor.accounts.map((account) => (
@@ -54,14 +56,17 @@ export function CompetitorDetailView({ id }: { id: number }) {
                     ) : (
                       account.handle
                     )}{' '}
-                    · {compactNumber(account.followers)} followers <LocationBadge location={account.location} />
-                    {account.location.evidence && <small className="evidence"> {account.location.evidence}</small>}
+                    <span className="meta-line">
+                      <span>{compactNumber(account.followers)} followers</span>
+                      <LocationBadge location={account.location} />
+                    </span>
+                    {account.location.evidence && <small className="evidence">{account.location.evidence}</small>}
                   </li>
                 ))}
               </ul>
-            </article>
+            </section>
 
-            <article>
+            <section>
               <h3>Score by window</h3>
               {data.scores_by_window.length === 0 ? (
                 <p>Not ranked yet: no posts have enough engagement.</p>
@@ -92,7 +97,7 @@ export function CompetitorDetailView({ id }: { id: number }) {
                   </tbody>
                 </table>
               )}
-            </article>
+            </section>
           </div>
 
           <h3>Top posts, last {state.window} days</h3>
@@ -105,8 +110,8 @@ export function CompetitorDetailView({ id }: { id: number }) {
                   <PostCard key={post.id} post={post} />
                 ))}
               </div>
-              <p>
-                <AppLink patch={{ tab: 'content', competitor: id }}>See all their ranked posts →</AppLink>
+              <p className="pager">
+                <AppLink patch={{ tab: 'content', competitor: id }}>See all their ranked posts</AppLink>
               </p>
             </>
           )}

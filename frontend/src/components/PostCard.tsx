@@ -49,49 +49,46 @@ export function PostCard({ post }: { post: Post }) {
   const { label } = post
 
   return (
-    <article className="post-card">
-      <a className="thumb" href={post.url} target="_blank" rel="noopener noreferrer">
-        <Thumb key={post.thumbnail_url ?? post.id} post={post} />
-      </a>
+    <article className="post">
+      <ScoreBadge score={post.score.score} />
 
       <div className="post-body">
-        <div className="post-head">
-          <ScoreBadge score={post.score.score} />
-          <div>
-            <h3 className="post-title">
-              <a href={post.url} target="_blank" rel="noopener noreferrer">
-                {hook}
-              </a>
-            </h3>
-            <p className="post-meta">
-              {post.creator.competitor_id !== null ? (
-                <AppLink patch={{ tab: 'competitors', competitor: post.creator.competitor_id }}>
-                  {post.creator.name}
-                </AppLink>
-              ) : (
-                <span>{post.creator.name}</span>
-              )}
-              {' · '}
-              {platform}
-              {post.format && ` · ${humanize(post.format)}`}
-              {` · ${relativeTime(post.published_at)}`}
-            </p>
-          </div>
-        </div>
+        <h3 className="post-title">
+          <a href={post.url} target="_blank" rel="noopener noreferrer">
+            {hook}
+          </a>
+        </h3>
 
-        <div className="chips">
+        <p className="meta-line">
+          {post.creator.competitor_id !== null ? (
+            <AppLink patch={{ tab: 'competitors', competitor: post.creator.competitor_id }}>
+              {post.creator.name}
+            </AppLink>
+          ) : (
+            <span>{post.creator.name}</span>
+          )}
+          <span>{post.format ? `${platform} ${humanize(post.format).toLowerCase()}` : platform}</span>
+          <span>{relativeTime(post.published_at)}</span>
+          <LocationBadge location={post.location} />
+        </p>
+
+        <p className="post-stats">
+          <Metric name="views" value={post.metrics.views} />
+          <Metric name="likes" value={post.metrics.likes} />
+          <Metric name="comments" value={post.metrics.comments} />
+          <Metric name="shares" value={post.metrics.shares} />
+          {post.score.reason && <span className="reason">{post.score.reason}</span>}
+        </p>
+
+        <p className="tags">
           {label?.topic && (
-            <AppLink
-              className="chip"
-              patch={{ tab: 'content', topic: label.topic }}
-              title="Show only this topic"
-            >
+            <AppLink className="tag" patch={{ tab: 'content', topic: label.topic }} title="Show only this topic">
               {humanize(label.topic)}
             </AppLink>
           )}
           {label?.hook_type && (
             <AppLink
-              className="chip"
+              className="tag"
               patch={{ tab: 'content', hook_type: label.hook_type }}
               title="Show only this kind of hook"
             >
@@ -99,22 +96,16 @@ export function PostCard({ post }: { post: Post }) {
             </AppLink>
           )}
           {label?.cta && label.cta !== 'none' && (
-            <span className="chip chip-static" title="Call to action">
+            <span className="tag tag-static" title="Call to action">
               CTA: {humanize(label.cta)}
             </span>
           )}
-          <LocationBadge location={post.location} />
-        </div>
-
-        <div className="metrics">
-          <Metric name="views" value={post.metrics.views} />
-          <Metric name="likes" value={post.metrics.likes} />
-          <Metric name="comments" value={post.metrics.comments} />
-          <Metric name="shares" value={post.metrics.shares} />
-        </div>
-
-        {post.score.reason && <p className="reason">{post.score.reason}</p>}
+        </p>
       </div>
+
+      <a className="thumb" href={post.url} target="_blank" rel="noopener noreferrer" tabIndex={-1} aria-hidden="true">
+        <Thumb key={post.thumbnail_url ?? post.id} post={post} />
+      </a>
     </article>
   )
 }

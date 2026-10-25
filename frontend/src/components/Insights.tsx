@@ -27,12 +27,10 @@ export function Insights() {
         does. Groups with fewer than {data?.min_group_size ?? 5} posts are left out.
       </p>
 
-      <div role="group" aria-label="Group by">
+      <div className="segmented" role="toolbar" aria-label="Group by">
         {GROUPS.map((group) => (
           <AppLink
             key={group.id}
-            role="button"
-            className={group.id === state.group_by ? undefined : 'secondary outline'}
             patch={{ group_by: group.id }}
             current={group.id === state.group_by}
           >
@@ -67,7 +65,7 @@ export function Insights() {
                   </span>
                   <span className="bar-value">{Math.round(group.avg_score)}</span>
                   <span className="bar-meta">
-                    {group.count} posts · {compactNumber(Math.round(group.avg_engagement))} avg engagements
+                    {group.count} posts, {compactNumber(Math.round(group.avg_engagement))} engagements on average
                   </span>
                 </AppLink>
               </li>

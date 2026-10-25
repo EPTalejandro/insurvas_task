@@ -25,7 +25,7 @@ function RunsTable() {
       {data && data.length === 0 && <p>Nothing has run yet. Use the command line: refresh --discover.</p>}
       {data && data.length > 0 && (
         <div className="table-wrap">
-          <table className="striped">
+          <table>
             <thead>
               <tr>
                 <th>Step</th>
@@ -72,7 +72,7 @@ function KeywordsTable() {
       {!error && !data && <Loading what="Loading keywords" />}
       {data && (
         <div className="table-wrap">
-          <table className="striped">
+          <table>
             <thead>
               <tr>
                 <th>Term</th>
@@ -107,16 +107,15 @@ export function Sources() {
   return (
     <>
       <h3>Platforms</h3>
-      <div className="grid-2">
+      <div className="facts">
         {meta.platforms.map((platform) => (
-          <article key={platform.id}>
+          <div key={platform.id}>
             <h4>{platform.label}</h4>
             <p>
-              {platform.enabled ? 'Keys set: collecting.' : 'No keys in .env: not collecting.'}
-              <br />
+              {platform.enabled ? 'Keys set, collecting.' : 'No keys in .env, not collecting.'}{' '}
               {platform.posts} posts stored.
             </p>
-          </article>
+          </div>
         ))}
       </div>
 
@@ -124,10 +123,11 @@ export function Sources() {
       <p className="summary">
         Hover a badge to see its evidence. Hashtag posts have no known author, so only their caption is judged.
       </p>
-      <ul className="plain-list">
+      <ul className="plain-list help-list">
         {Object.entries(LOCATION_LABELS).map(([status, info]) => (
           <li key={status}>
-            <span className={`badge tone-${info.tone}`}>{info.text}</span> {LOCATION_HELP[status]}
+            <span className={`flag tone-${info.tone}`}>{info.text}</span>
+            <span>{LOCATION_HELP[status]}</span>
           </li>
         ))}
       </ul>
