@@ -48,3 +48,9 @@ pnpm dev     # http://localhost:5173 (proxies /api to :8000)
 pnpm lint
 pnpm build
 ```
+
+The UI has four tabs: **Top Content** (ranked post cards with filters), **Competitors**
+(leaderboard and a page per competitor), **Insights** (average score per hook, topic or
+format) and **Sources** (platforms, search terms, recent runs, and how "US-based" is decided).
+Everything you pick (tab, window, platform, filters) is in the URL, so a view can be shared.
+It needs the backend running on port 8000.

@@ -1,0 +1,136 @@
+import { useState } from 'react'
+import { postsUrl } from '../api.ts'
+import { useApp } from '../context.ts'
+import { humanize } from '../format.ts'
+import { useFetch } from '../hooks.ts'
+import type { Option, PostsPage } from '../types.ts'
+import { Empty, ErrorBox, Loading } from './StateViews.tsx'
+import { PostCard } from './PostCard.tsx'
+
+const PAGE_SIZE = 20
+
+function FilterSelect(props: {
+  label: string
+  value: string
+  options: Option[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <label>
+      {props.label}
+      <select value={props.value} onChange={(event) => props.onChange(event.target.value)}>
+        <option value="">All</option>
+        {props.options.map((option) => (
+          <option key={option.id} value={option.id} title={option.label}>
+            {humanize(option.id)}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+/** The page of posts. It is remounted when a filter changes, so paging starts again at 1. */
+function PostList() {
+  const { meta, state, update } = useApp()
+  const [offset, setOffset] = useState(0)
+  const { data, error, loading, reload } = useFetch<PostsPage>(
+    postsUrl({ ...state, offset, limit: PAGE_SIZE }),
+  )
+
+  const hasFilters = Boolean(state.topic || state.hook_type || state.format || state.competitor)
+  const competitorName = data?.items[0]?.creator.name ?? `#${state.competitor}`
+  const goToPage = (next: number) => {
+    setOffset(next)
+    window.scrollTo({ top: 0 })
+  }
+
+  return (
+    <section aria-busy={loading}>
+      <div className="filters">
+        <FilterSelect
+          label="Topic"
+          value={state.topic}
+          options={meta.taxonomy.topics}
+          onChange={(topic) => update({ topic })}
+        />
+        <FilterSelect
+          label="Hook"
+          value={state.hook_type}
+          options={meta.taxonomy.hooks}
+          onChange={(hook_type) => update({ hook_type })}
+        />
+        <FilterSelect
+          label="Format"
+          value={state.format}
+          options={meta.taxonomy.formats}
+          onChange={(format) => update({ format })}
+        />
+      </div>
+
+      {(state.competitor !== null || hasFilters) && (
+        <p className="active-filters">
+          {state.competitor !== null && (
+            <span className="chip chip-static">Competitor: {competitorName}</span>
+          )}
+          <button
+            className="secondary outline"
+            onClick={() => update({ topic: '', hook_type: '', format: '', competitor: null })}
+          >
+            Clear filters
+          </button>
+        </p>
+      )}
+
+      {error && <ErrorBox message={error} onRetry={reload} />}
+      {!error && !data && <Loading what="Loading posts" />}
+
+      {data && data.items.length === 0 && (
+        <Empty>
+          <p>No ranked posts match these filters in the last {state.window} days.</p>
+          {data.too_new > 0 && <p>{data.too_new} newer posts are too new to rank yet.</p>}
+        </Empty>
+      )}
+
+      {data && data.items.length > 0 && (
+        <>
+          <p className="summary">
+            {data.total} ranked posts, best first.
+            {data.too_new > 0 &&
+              ` ${data.too_new} more ${data.too_new === 1 ? 'is' : 'are'} too new to rank yet (under ${meta.thresholds.min_post_age_hours} hours).`}
+          </p>
+          <div className="post-list">
+            {data.items.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+          <nav className="pager" aria-label="Pages">
+            <button
+              className="secondary outline"
+              disabled={offset === 0}
+              onClick={() => goToPage(Math.max(0, offset - PAGE_SIZE))}
+            >
+              Previous
+            </button>
+            <span>
+              {offset + 1}–{Math.min(offset + PAGE_SIZE, data.total)} of {data.total}
+            </span>
+            <button
+              className="secondary outline"
+              disabled={offset + PAGE_SIZE >= data.total}
+              onClick={() => goToPage(offset + PAGE_SIZE)}
+            >
+              Next
+            </button>
+          </nav>
+        </>
+      )}
+    </section>
+  )
+}
+
+export function TopContent() {
+  const { state } = useApp()
+  const key = [state.window, state.platform, state.topic, state.hook_type, state.format, state.competitor].join('|')
+  return <PostList key={key} />
+}

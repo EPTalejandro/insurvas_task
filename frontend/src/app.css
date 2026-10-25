@@ -1,0 +1,153 @@
+/* Small additions on top of Pico.css. Colors use Pico's variables so dark mode just works. */
+
+:root {
+  --tone-yes: #1a9d5b;
+  --tone-maybe: #c98a00;
+  --tone-no: #c93a3a;
+  --tone-unknown: #7a8590;
+  --level-strong: #1a9d5b;
+  --level-good: #2f7fd1;
+  --level-normal: #7a8590;
+}
+
+/* ---- header ---- */
+.app-header { margin-bottom: 1.5rem; }
+.app-header h1 { margin-bottom: 0.25rem; font-size: 1.75rem; }
+.subtitle { margin: 0; color: var(--pico-muted-color); }
+.controls { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; }
+.controls [role='group'] { margin: 0; width: auto; }
+.controls select { margin: 0; width: auto; min-width: 12rem; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--pico-muted-border-color); }
+.tabs a {
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs a[aria-current='page'] { border-bottom-color: var(--pico-primary); font-weight: 600; }
+
+/* ---- states ---- */
+.state { padding: 1.5rem; text-align: center; color: var(--pico-muted-color); }
+.state-error { color: var(--pico-del-color); }
+.state-empty { border: 1px dashed var(--pico-muted-border-color); border-radius: var(--pico-border-radius); }
+section[aria-busy='true'] > .post-list,
+section[aria-busy='true'] > .bars,
+section[aria-busy='true'] > .table-wrap { opacity: 0.55; transition: opacity 0.15s; }
+.summary { color: var(--pico-muted-color); }
+
+/* ---- filters ---- */
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.75rem; }
+.active-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.active-filters button { margin: 0; padding: 0.15rem 0.6rem; width: auto; font-size: 0.85rem; }
+.inline-check { display: block; margin-bottom: 1rem; }
+
+/* ---- badges and chips ---- */
+.badge, .chip {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge { border: 1px solid currentColor; font-weight: 600; cursor: help; }
+.tone-yes { color: var(--tone-yes); }
+.tone-maybe { color: var(--tone-maybe); }
+.tone-no { color: var(--tone-no); }
+.tone-unknown { color: var(--tone-unknown); }
+.chip {
+  background: var(--pico-card-sectioning-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  text-decoration: none;
+}
+a.chip:hover { border-color: var(--pico-primary); }
+.chip-static { color: var(--pico-muted-color); }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin: 0.5rem 0; }
+
+.score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  flex: none;
+}
+.score-strong { background: var(--level-strong); }
+.score-good { background: var(--level-good); }
+.score-normal { background: var(--level-normal); }
+
+/* ---- post cards ---- */
+.post-list { display: grid; gap: 1rem; }
+.post-card {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem;
+}
+.thumb {
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--pico-border-radius);
+  overflow: hidden;
+  background: var(--pico-card-sectioning-background-color);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-empty { display: grid; place-items: center; height: 100%; color: var(--pico-muted-color); font-size: 0.9rem; }
+.post-head { display: flex; gap: 0.75rem; align-items: flex-start; }
+.post-title {
+  margin: 0;
+  font-size: 1.05rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.post-title a { text-decoration: none; }
+.post-meta { margin: 0.15rem 0 0; font-size: 0.85rem; color: var(--pico-muted-color); }
+.metrics { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem; }
+.reason { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--pico-muted-color); }
+.pager { display: flex; gap: 1rem; align-items: center; justify-content: center; margin-top: 1.5rem; }
+.pager button { margin: 0; width: auto; }
+
+/* ---- tables and detail ---- */
+.table-wrap { overflow-x: auto; }
+td.message { max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-head h2 { margin-bottom: 0.25rem; }
+.detail-head p { margin: 0 0 0.25rem; color: var(--pico-muted-color); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
+.grid-2 article { margin: 0; }
+.plain-list { list-style: none; padding: 0; }
+.plain-list li { margin-bottom: 0.6rem; }
+.evidence { display: block; color: var(--pico-muted-color); }
+.current-row { font-weight: 600; }
+
+/* ---- insight bars ---- */
+.bars { list-style: none; padding: 0; margin: 1.5rem 0; }
+.bar-row {
+  display: grid;
+  grid-template-columns: 11rem 1fr 2.5rem;
+  grid-template-areas: 'label track value' '. meta meta';
+  gap: 0.15rem 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  text-decoration: none;
+  color: inherit;
+}
+.bar-row:hover .bar-fill { filter: brightness(1.15); }
+.bar-label { grid-area: label; font-weight: 600; }
+.bar-track { grid-area: track; height: 0.9rem; border-radius: 999px; background: var(--pico-card-sectioning-background-color); overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: var(--level-good); border-radius: 999px; }
+.bar-value { grid-area: value; text-align: right; font-weight: 700; }
+.bar-meta { grid-area: meta; font-size: 0.82rem; color: var(--pico-muted-color); }
+
+/* ---- small screens ---- */
+@media (max-width: 640px) {
+  .post-card { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 7rem 1fr 2.2rem; }
+  .controls select { min-width: 0; flex: 1; }
+}

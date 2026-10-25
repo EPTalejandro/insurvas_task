@@ -1,22 +1,45 @@
-import { useEffect, useState } from 'react'
-import { getHealth } from './api'
+import { metaUrl } from './api.ts'
+import { Competitors } from './components/Competitors.tsx'
+import { Header } from './components/Header.tsx'
+import { Insights } from './components/Insights.tsx'
+import { Sources } from './components/Sources.tsx'
+import { ErrorBox, Loading } from './components/StateViews.tsx'
+import { TopContent } from './components/TopContent.tsx'
+import { AppContext } from './context.ts'
+import { useFetch } from './hooks.ts'
+import type { Meta } from './types.ts'
+import { useUrlState } from './url.ts'
 
 export default function App() {
-  const [apiStatus, setApiStatus] = useState('checking…')
+  const { state, update, href } = useUrlState()
+  const { data: meta, error, reload } = useFetch<Meta>(metaUrl)
 
-  useEffect(() => {
-    getHealth()
-      .then((health) => setApiStatus(health.status))
-      .catch((error: Error) => setApiStatus(`unreachable (${error.message})`))
-  }, [])
+  // Nothing can be shown before we know the windows, platforms and labels.
+  if (error) {
+    return (
+      <main className="container">
+        <h1>Competitor Content Intelligence</h1>
+        <ErrorBox message={`The API is not answering (${error}). Is the backend running?`} onRetry={reload} />
+      </main>
+    )
+  }
+  if (!meta) {
+    return (
+      <main className="container">
+        <Loading what="Loading" />
+      </main>
+    )
+  }
 
   return (
-    <main className="container">
-      <h1>Competitor Content Intelligence</h1>
-      <p>Public content from life insurance agents, labeled and ranked.</p>
-      <p>
-        API: <strong>{apiStatus}</strong>
-      </p>
-    </main>
+    <AppContext.Provider value={{ meta, state, update, href }}>
+      <main className="container">
+        <Header />
+        {state.tab === 'content' && <TopContent />}
+        {state.tab === 'competitors' && <Competitors />}
+        {state.tab === 'insights' && <Insights />}
+        {state.tab === 'sources' && <Sources />}
+      </main>
+    </AppContext.Provider>
   )
 }
