@@ -57,7 +57,9 @@ def test_the_default_window_is_7(client, data):
         {"limit": 0},
         {"limit": 101},
         {"offset": -1},
+        {"offset": 2**63},  # past SQLite's 64-bit integers: was a 500
         {"competitor_id": "abc"},
+        {"competitor_id": 2**63},
     ],
 )
 def test_bad_post_filters_are_a_422(client, data, params):
@@ -245,6 +247,11 @@ def test_a_candidate_has_a_detail_page_but_no_scores(client, data):
 
 def test_an_unknown_competitor_is_a_404(client, data):
     assert client.get("/api/competitors/99999").status_code == 404
+
+
+def test_a_competitor_id_too_big_for_sqlite_is_a_422(client, data):
+    assert client.get(f"/api/competitors/{2**63}").status_code == 422
+    assert client.get(f"/api/competitors/{2**63 - 1}").status_code == 404
 
 
 # --- /api/insights ---------------------------------------------------------------------------

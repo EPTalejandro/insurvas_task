@@ -198,3 +198,6 @@ test-results/
 .playwright-cli/
 test.md
 report.pdf
+
+# Security test run (security-tests.md)
+security-results/

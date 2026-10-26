@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api_common import (
+    MAX_INT,
     PostFilters,
     post_filters,
     ranked_count_stmt,
@@ -23,7 +24,7 @@ def list_posts(
     window: int = Depends(window_param),
     filters: PostFilters = Depends(post_filters),
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=MAX_INT),
     session: Session = Depends(get_session),
 ) -> PostsPage:
     """Ranked posts of a window, best first."""

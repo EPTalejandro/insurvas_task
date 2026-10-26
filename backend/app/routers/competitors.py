@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.api_common import (
+    MAX_INT,
     PostFilters,
     account_out,
     ranked_posts_stmt,
@@ -95,7 +96,7 @@ def list_competitors(
 
 @router.get("/competitors/{competitor_id}", response_model=CompetitorDetail)
 def get_competitor(
-    competitor_id: int,
+    competitor_id: int = Path(le=MAX_INT),
     window: int = Depends(window_param),
     session: Session = Depends(get_session),
 ) -> CompetitorDetail:

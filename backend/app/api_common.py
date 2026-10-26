@@ -24,6 +24,8 @@ from app.schemas import (
 
 PLATFORMS = {"youtube": "YouTube", "instagram": "Instagram"}
 TEXT_PREVIEW_CHARS = 280
+# SQLite integers are 64-bit: a bigger number makes the driver raise (a 500), so it is a 422.
+MAX_INT = 2**63 - 1
 
 
 # --- parameter checks (a wrong value is a 422, like any other bad input) -----------------------
@@ -57,7 +59,7 @@ def post_filters(
     topic: str | None = Query(None),
     hook_type: str | None = Query(None),
     format: str | None = Query(None),
-    competitor_id: int | None = Query(None),
+    competitor_id: int | None = Query(None, le=MAX_INT),
 ) -> PostFilters:
     return PostFilters(
         platform=choice(platform, PLATFORMS, "platform"),
