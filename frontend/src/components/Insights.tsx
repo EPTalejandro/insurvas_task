@@ -3,15 +3,16 @@ import { useApp } from '../context.ts'
 import { compactNumber, humanize } from '../format.ts'
 import { useFetch } from '../hooks.ts'
 import type { Insights as InsightsData } from '../types.ts'
-import { GROUPS, type GroupBy, type UrlState } from '../url.ts'
+import { GROUPS, tabPatch, type GroupBy, type UrlState } from '../url.ts'
 import { AppLink } from './AppLink.tsx'
 import { Empty, ErrorBox, Loading } from './StateViews.tsx'
 
-/** Clicking a bar shows the posts behind it. */
+/** Clicking a bar shows the posts behind it: the same filters Insights used, plus that group. */
 function filterPatch(groupBy: GroupBy, value: string): Partial<UrlState> {
-  if (groupBy === 'topic') return { tab: 'content', topic: value }
-  if (groupBy === 'hook_type') return { tab: 'content', hook_type: value }
-  return { tab: 'content', format: value }
+  const patch = tabPatch('content')
+  if (groupBy === 'topic') return { ...patch, topic: value }
+  if (groupBy === 'hook_type') return { ...patch, hook_type: value }
+  return { ...patch, format: value }
 }
 
 export function Insights() {

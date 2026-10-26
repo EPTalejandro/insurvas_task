@@ -192,3 +192,9 @@ node_modules/
 *.db
 Roadmap.md
 NOTES.md
+
+# E2E runs with playwright-cli (test.md)
+test-results/
+.playwright-cli/
+test.md
+report.pdf

@@ -32,10 +32,13 @@ function FilterSelect(props: {
   )
 }
 
-/** The page of posts. It is remounted when a filter changes, so paging starts again at 1. */
-function PostList() {
+/** The page of posts. Not remounted on a filter change, so the old list stays up while the new one loads. */
+export function TopContent() {
   const { meta, state, update } = useApp()
-  const [offset, setOffset] = useState(0)
+  // The page belongs to the filters it was chosen for: new filters start again at page 1.
+  const filters = [state.window, state.platform, state.topic, state.hook_type, state.format, state.competitor].join('|')
+  const [page, setPage] = useState({ filters, offset: 0 })
+  const offset = page.filters === filters ? page.offset : 0
   const { data, error, loading, reload } = useFetch<PostsPage>(
     postsUrl({ ...state, offset, limit: PAGE_SIZE }),
   )
@@ -44,7 +47,7 @@ function PostList() {
   const competitorName = data?.items[0]?.creator.name ?? `#${state.competitor}`
   const longerWindow = meta.windows.find((days) => days > state.window)
   const goToPage = (next: number) => {
-    setOffset(next)
+    setPage({ filters, offset: next })
     window.scrollTo({ top: 0 })
   }
 
@@ -143,10 +146,4 @@ function PostList() {
       )}
     </section>
   )
-}
-
-export function TopContent() {
-  const { state } = useApp()
-  const key = [state.window, state.platform, state.topic, state.hook_type, state.format, state.competitor].join('|')
-  return <PostList key={key} />
 }

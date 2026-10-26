@@ -1,6 +1,6 @@
 import { useApp } from '../context.ts'
 import { compactNumber, relativeTime } from '../format.ts'
-import { TABS } from '../url.ts'
+import { TABS, tabPatch } from '../url.ts'
 import { AppLink } from './AppLink.tsx'
 
 export function Header() {
@@ -21,7 +21,7 @@ export function Header() {
       <div className="masthead-bar">
         <nav className="tabs" aria-label="Sections">
           {TABS.map((tab) => (
-            <AppLink key={tab.id} patch={{ tab: tab.id }} current={tab.id === state.tab}>
+            <AppLink key={tab.id} patch={tabPatch(tab.id)} current={tab.id === state.tab}>
               {tab.label}
             </AppLink>
           ))}

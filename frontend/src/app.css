@@ -238,6 +238,7 @@ a.tag:hover { color: var(--sea); border-bottom: 1px solid var(--sea); text-decor
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: 0;
+  white-space: nowrap; /* "100" must never break into "10" / "0" */
 }
 .score-bar {
   display: block;
@@ -300,7 +301,8 @@ td .score-bar { height: 2px; margin-top: 0.2rem; }
 /* The best post of the list gets the biggest numeral. */
 .post-lead { padding-top: 1.4rem; padding-bottom: 1.4rem; }
 .post-lead .score { width: 6rem; }
-.post-lead .score-num { font-size: 6rem; }
+/* "100" is about 1.2em wide in this font, so 5rem is the largest size that fits the 6rem column. */
+.post-lead .score-num { font-size: 5rem; }
 .post-lead .score-bar { height: 5px; margin-top: 0.5rem; }
 .post-lead .post-title { font-size: 1.5rem; line-height: 1.2; }
 
@@ -389,7 +391,7 @@ td .flags { display: flex; flex-wrap: wrap; gap: 0.1rem 0.9rem; margin-top: 0.25
   .score { width: 3.25rem; }
   .score-num { font-size: 2.25rem; }
   .post-lead .score { width: 3.75rem; }
-  .post-lead .score-num { font-size: 3.5rem; }
+  .post-lead .score-num { font-size: 3rem; }
   .post-lead .post-title { font-size: 1.25rem; }
   h2 { font-size: 2rem; }
   .bar-row { grid-template-columns: 6.5rem 1fr 2.75rem; gap: 0.1rem 0.75rem; }

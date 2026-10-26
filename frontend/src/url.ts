@@ -44,6 +44,14 @@ export function parseSearch(search: string): UrlState {
   }
 }
 
+/**
+ * Switching tabs keeps only the header choices (window, platform). The other values belong to
+ * one tab, and carried over they would filter the next tab without the user seeing why.
+ */
+export function tabPatch(tab: Tab): Partial<UrlState> {
+  return { tab, topic: '', hook_type: '', format: '', competitor: null, group_by: 'hook_type' }
+}
+
 /** Only values that differ from the defaults go in the URL, so it stays short. */
 export function toSearch(state: UrlState): string {
   const params = new URLSearchParams()
