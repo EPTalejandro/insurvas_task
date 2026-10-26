@@ -16,6 +16,7 @@ def label_for(post_id, **overrides) -> dict:
         "hook_text": "Gemini's own words",
         "cta": "book_call",
         "is_relevant": True,
+        "is_flex": False,
         "confidence": 0.9,
     }
     return label | overrides

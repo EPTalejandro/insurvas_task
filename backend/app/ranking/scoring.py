@@ -26,6 +26,7 @@ class PostInput:
     counts: bool
     # False for hashtag posts: the "creator" is a placeholder, so there is no usual to compare to.
     known_author: bool = True
+    format: str | None = None  # short videos get FORMAT_BOOST
 
 
 @dataclass(frozen=True)
@@ -170,7 +171,7 @@ def _score_platform(platform: str, items: list[_Measured]) -> list[PostResult]:
     outperformances = [i.outperformance for i in items if i.outperformance is not None]
     reaches = [i.reach for i in items if i.reach is not None]
 
-    scored: list[tuple[float, _Measured]] = []
+    scored: list[tuple[float, float, _Measured]] = []
     for item in items:
         impact = percentile_rank(item.adjusted, adjusteds)
         parts = [(config.BLEND["impact"], impact)]
@@ -179,10 +180,12 @@ def _score_platform(platform: str, items: list[_Measured]) -> list[PostResult]:
             parts.append((config.BLEND["outperformance"], percentile))
         if item.reach is not None:
             parts.append((config.BLEND["reach"], percentile_rank(item.reach, reaches)))
-        scored.append((_blend(parts, fallback=impact), item))
+        blend = _blend(parts, fallback=impact)
+        boost = config.FORMAT_BOOST.get(item.post.format or "", 1.0)
+        scored.append((min(100.0, blend * boost), blend, item))
 
     # Best first; ties go to more engagement, then the lower id, so reruns match.
-    scored.sort(key=lambda s: (-s[0], -s[1].adjusted, s[1].post.post_id))
+    scored.sort(key=lambda s: (-s[0], -s[2].adjusted, s[2].post.post_id))
     return [
         PostResult(
             post_id=item.post.post_id,
@@ -192,9 +195,10 @@ def _score_platform(platform: str, items: list[_Measured]) -> list[PostResult]:
             outperformance=item.outperformance,
             score=score,
             rank_in_platform=position,
-            reason=make_reason(platform, item.total, item.outperformance, score),
+            # The unboosted blend, so "top N%" stays a true percentile.
+            reason=make_reason(platform, item.total, item.outperformance, blend),
         )
-        for position, (score, item) in enumerate(scored, start=1)
+        for position, (score, blend, item) in enumerate(scored, start=1)
     ]
 
 

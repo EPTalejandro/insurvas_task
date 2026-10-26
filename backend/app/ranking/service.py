@@ -47,8 +47,12 @@ def load_inputs(
             allowed = post.location_status in config.HASHTAG_LOCATIONS
         else:
             allowed = competitor_status == "active"
-        # An unlabeled post still counts; only an explicit "not relevant" removes it.
-        counts = allowed and creator.is_relevant and (label is None or label.is_relevant)
+        # An unlabeled post still counts; only an explicit "not relevant" or "flex" removes it.
+        counts = (
+            allowed
+            and creator.is_relevant
+            and (label is None or (label.is_relevant and not label.is_flex))
+        )
         inputs.append(
             PostInput(
                 post_id=post.id,
@@ -62,6 +66,7 @@ def load_inputs(
                 followers=creator.followers,
                 counts=counts,
                 known_author=not is_hashtag,
+                format=post.format,
             )
         )
         labels[post.id] = label

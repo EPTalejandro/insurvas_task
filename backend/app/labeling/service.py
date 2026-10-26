@@ -127,7 +127,7 @@ def label_posts(
         todo = todo[:limit]
 
     state = _Progress()
-    done = 0
+    done = flagged = 0
     for chunk in batched(todo, labeler.batch_size, strict=False):  # the last chunk may be short
         results = _label_chunk(labeler, chunk, state)
         for post, current_hash in chunk:
@@ -138,6 +138,8 @@ def label_posts(
             label.hook_text = result.hook_text
             label.cta = result.cta
             label.is_relevant = result.is_relevant
+            label.is_flex = result.is_flex
+            flagged += result.is_flex
             label.confidence = result.confidence
             label.labeler = made_by.name
             label.model = made_by.model
@@ -155,6 +157,8 @@ def label_posts(
     fallbacks = state.used[RULES.name] if labeler.name != RULES.name else 0
     if fallbacks:
         message += f" ({fallbacks} fell back to rules)"
+    if flagged:
+        message += f", {flagged} flagged as flex"
     message += f", {skipped} unchanged"
     if deferred:
         message += f", {deferred} left for a later run"

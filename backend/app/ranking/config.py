@@ -15,6 +15,10 @@ ENGAGEMENT_WEIGHTS = {"likes": 1.0, "comments": 1.0, "shares": 1.0}
 # content that really got engagement.
 BLEND = {"impact": 0.60, "outperformance": 0.25, "reach": 0.15}
 
+# A small nudge for short videos: they earn fewer likes and comments per view than long ones,
+# so on engagement alone they sink. The final score is multiplied, then capped at 100.
+FORMAT_BOOST = {"short_video": 1.10, "reel": 1.10}
+
 MIN_ENGAGEMENT_TO_RANK = 5  # likes + comments + shares; below this a post is noise
 BASELINE_FLOOR = 5.0  # a creator's "usual" never counts as less than this (adjusted engagement)
 

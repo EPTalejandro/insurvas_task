@@ -337,7 +337,13 @@ def test_meta_describes_what_the_ui_can_pick(client, data):
 def test_meta_on_an_empty_database(client):
     meta = client.get("/api/meta").json()
     assert meta["last_updated"] is None
-    assert meta["counts"] == {"competitors": 0, "posts": 0, "labeled_posts": 0, "ranked_posts": 0}
+    assert meta["counts"] == {
+        "competitors": 0,
+        "posts": 0,
+        "labeled_posts": 0,
+        "ranked_posts": 0,
+        "flex_posts": 0,
+    }
 
 
 def test_runs_come_newest_first(client, session, data):

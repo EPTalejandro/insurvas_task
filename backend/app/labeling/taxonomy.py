@@ -5,7 +5,15 @@ would count as three topics and the insights would be meaningless.
 Changing any list means bumping TAXONOMY_VERSION, so old labels are redone.
 """
 
-TAXONOMY_VERSION = 1
+TAXONOMY_VERSION = 2  # 2: added the flex flag
+
+# A flex post is labeled like any other but never ranked: it gets engagement without giving the
+# viewer anything to learn from or copy.
+FLEX_DEFINITION = (
+    "the post's main point is showing off results (income, commissions, production or sales "
+    "records, awards, rankings, cars, lifestyle) with no lesson, tip or information a viewer "
+    "could use. A post that shows a result and then explains how it was done is not a flex."
+)
 
 TOPICS: dict[str, str] = {
     "term_life": "Term life insurance",

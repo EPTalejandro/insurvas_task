@@ -194,6 +194,7 @@ class CountsOut(BaseModel):
     posts: int
     labeled_posts: int
     ranked_posts: int  # in the default window
+    flex_posts: int  # labeled as flex, so never ranked
 
 
 class MetaOut(BaseModel):

@@ -13,7 +13,7 @@ from pydantic import BaseModel, ValidationError
 from app.gemini_client import GeminiJson
 from app.labeling.rules import HOOK_MAX_CHARS, LabelResult, opening_line
 from app.labeling.service import BatchResult, Labeler, PostText, label_post
-from app.labeling.taxonomy import CTAS, HOOKS, TOPICS
+from app.labeling.taxonomy import CTAS, FLEX_DEFINITION, HOOKS, TOPICS
 
 BATCH_SIZE = 10  # posts per request: keeps us inside the free-tier request limits
 TEXT_CHARS = 600
@@ -33,6 +33,7 @@ class GeminiLabel(BaseModel):
     hook_text: str
     cta: _one_of(CTAS)
     is_relevant: bool
+    is_flex: bool
     confidence: float
 
 
@@ -77,6 +78,9 @@ insurance agents and agencies (selling, leads, recruiting, training), even when 
 named. False for posts that have nothing to do with selling insurance (personal life, lifestyle,
 beauty, parenting, memes, motivation), and for content only about health, Medicare, auto or
 home insurance.
+is_flex: true when {FLEX_DEFINITION} A flex can still be about insurance, so judge it apart
+from is_relevant. Flex: "$1.2 million paid today. Check the scoreboard." Not a flex: "I wrote
+$50k my first month. Here are the 3 lead sources I used."
 confidence: how sure you are, from 0 to 1.
 
 Posts, one JSON object per line:
@@ -92,6 +96,7 @@ def _to_result(label: GeminiLabel, item: PostText) -> LabelResult:
         hook_text=opening_line(item.title, item.text) or label.hook_text[:HOOK_MAX_CHARS] or None,
         cta=label.cta,
         is_relevant=label.is_relevant,
+        is_flex=label.is_flex,
         confidence=min(1.0, max(0.0, label.confidence)),
     )
 

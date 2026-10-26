@@ -24,6 +24,7 @@ class LabelResult:
     cta: str
     is_relevant: bool
     confidence: float
+    is_flex: bool = False  # showing off results with nothing to learn: never ranked
 
 
 def _words(*terms: str) -> re.Pattern[str]:
@@ -171,6 +172,38 @@ def detect_cta(title: str | None, text: str | None) -> str:
     return "none"
 
 
+# Flex posts: a big money amount next to a result word, with nothing that teaches. Kept narrow on
+# purpose: "a $1 million policy for $30 a month" must not be flagged.
+_BIG_MONEY = re.compile(
+    r"\$\s?\d{1,3}(?:,\d{3})+"  # $3,025,768
+    r"|\$\s?\d+(?:\.\d+)?\s?(?:k|m|mil|million|thousand)\b"  # $50k, $1.2 million
+    r"|\$\s?\d{4,}",  # $5000
+    re.IGNORECASE,
+)
+_RESULT_WORDS = _words(
+    "paid",
+    "for the week",
+    "this week",
+    "this month",
+    "today",
+    "commission",
+    "commissions",
+    "record",
+    "production",
+    "issued",
+    "sold",
+    "scoreboard",
+)
+_TEACHING = _words("how", "why", "tip", "tips", "mistake", "mistakes", "learn", "lesson", "steps")
+
+
+def looks_like_flex(title: str | None, text: str | None) -> bool:
+    blob = f"{title or ''}\n{text or ''}"
+    if "?" in blob or _TEACHING.search(blob):
+        return False
+    return bool(_BIG_MONEY.search(blob) and _RESULT_WORDS.search(blob))
+
+
 def label_post(title: str | None, text: str | None) -> LabelResult:
     topic, hits = detect_topic(title, text)
     hook_text = opening_line(title, text)
@@ -185,6 +218,7 @@ def label_post(title: str | None, text: str | None) -> LabelResult:
         # Rules cannot judge relevance, so every post counts. Gemini can mark posts irrelevant.
         is_relevant=True,
         confidence=confidence,
+        is_flex=looks_like_flex(title, text),
     )
 
 

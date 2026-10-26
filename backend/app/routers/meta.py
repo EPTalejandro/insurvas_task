@@ -70,6 +70,7 @@ def get_meta(
             ),
             posts=sum(posts_by_platform.values()),
             labeled_posts=session.scalar(select(func.count()).select_from(Label)),
+            flex_posts=session.scalar(select(func.count()).select_from(Label).where(Label.is_flex)),
             ranked_posts=session.scalar(
                 select(func.count())
                 .select_from(PostScore)

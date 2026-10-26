@@ -24,7 +24,9 @@ def add_competitor(session, name, *, status="active", followers=1000, relevant=T
     return competitor, creator
 
 
-def add_post(session, creator, external_id, *, days, likes=10, topic=None, relevant=True):
+def add_post(
+    session, creator, external_id, *, days, likes=10, topic=None, relevant=True, flex=False
+):
     post = Post(
         creator_id=creator.id,
         platform="youtube",
@@ -46,6 +48,7 @@ def add_post(session, creator, external_id, *, days, likes=10, topic=None, relev
                 labeler="rules",
                 taxonomy_version=1,
                 is_relevant=relevant,
+                is_flex=flex,
             )
         )
     return post
@@ -231,3 +234,27 @@ def test_hashtag_posts_do_not_change_the_youtube_scores(session):
 
     assert before and youtube_scores(session) == before  # percentiles are per platform
     assert session.get(CompetitorScore, (competitor.id, 7)) is not None
+
+
+def test_flex_posts_are_not_ranked_and_do_not_count_for_their_competitor(session):
+    competitor, creator = add_competitor(session, "jane")
+    flex = add_post(
+        session, creator, "flex", days=2, likes=5000, topic="agent_recruiting", flex=True
+    )
+    useful = [
+        add_post(session, creator, f"u{i}", days=2 + i, likes=20, topic="iul") for i in range(3)
+    ]
+    session.commit()
+
+    rank_all(session, NOW)
+
+    scored = set(session.scalars(select(PostScore.post_id).where(PostScore.window_days == 7)))
+    assert flex.id not in scored
+    assert {p.id for p in useful} <= scored
+    score = session.scalars(
+        select(CompetitorScore).where(
+            CompetitorScore.competitor_id == competitor.id, CompetitorScore.window_days == 7
+        )
+    ).one()
+    assert score.posts_count == 3
+    assert score.best_post_id != flex.id

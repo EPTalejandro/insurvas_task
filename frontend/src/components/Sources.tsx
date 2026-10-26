@@ -132,6 +132,13 @@ export function Sources() {
         ))}
       </ul>
 
+      <h3>Posts left out as flexes</h3>
+      <p className="summary">
+        {meta.counts.flex_posts} {meta.counts.flex_posts === 1 ? 'post was' : 'posts were'} left out
+        as flexes: they show off results (income, sales records, awards) without a lesson for the
+        viewer. They are still stored, just never ranked.
+      </p>
+
       <KeywordsTable />
       <RunsTable />
     </>

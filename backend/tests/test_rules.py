@@ -7,6 +7,7 @@ from app.labeling.rules import (
     detect_hook,
     detect_topic,
     label_post,
+    looks_like_flex,
     opening_line,
 )
 from app.labeling.taxonomy import CTAS, HOOKS, TOPICS
@@ -153,3 +154,37 @@ def test_confidence_is_low_without_keywords_and_grows_with_hits():
     none = label_post("Good morning", None).confidence
     one = label_post("Final expense", None).confidence
     assert none < one
+
+
+# --- flex posts ------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Numbers don't lie. $1.2 MILLION PAID TODAY to the team. Check the scoreboard.",
+        "$3,025,768 FOR THE WEEK. New record in life insurance policies sold in a single week.",
+        "Just hit $50k in commissions this month 💰",
+    ],
+)
+def test_bragging_about_results_is_a_flex(text):
+    assert looks_like_flex(None, text)
+
+
+@pytest.mark.parametrize(
+    "title, text",
+    [
+        ("How I made $50k my first year", "3 lead sources that paid off this month"),
+        ("$1 million of coverage for $30 a month?", None),
+        ("Get $1 million of coverage for $30 a month", "Term life explained"),
+        ("Term life vs whole life", "Which one fits a family with young kids"),
+        ("$50k in commissions this month", "The 3 mistakes I stopped making"),
+    ],
+)
+def test_teaching_or_plain_posts_are_not_a_flex(title, text):
+    assert not looks_like_flex(title, text)
+
+
+def test_the_rules_label_carries_the_flex_flag():
+    assert label_post("$75k for the week", "New record. Paid today.").is_flex
+    assert not label_post("Final expense explained", None).is_flex

@@ -3,7 +3,7 @@ import pytest
 from app.gemini_client import GeminiJson
 from app.labeling.gemini import BATCH_SIZE, TEXT_CHARS, GeminiLabel, GeminiLabeler, build_prompt
 from app.labeling.service import PostText
-from app.labeling.taxonomy import CTAS, HOOKS, TOPICS
+from app.labeling.taxonomy import CTAS, FLEX_DEFINITION, HOOKS, TOPICS
 from tests.gemini_fake import RESOLVED_MODEL, SECRET, Clock, FakeGemini, ids_in, label_for
 
 
@@ -109,3 +109,31 @@ def test_posts_without_text_can_be_labeled_too(text):
     post = PostText(1, "youtube", "Only a title", text)
     result = labeler(FakeGemini()).label_batch([post])
     assert result.labels[1] is not None
+
+
+def test_the_flex_flag_is_read_from_the_answer():
+    def answer(prompt):
+        return [label_for(1, is_flex=True), label_for(2)]
+
+    result = labeler(FakeGemini(answer)).label_batch(items(1, 2))
+
+    assert result.labels[1].is_flex is True
+    assert result.labels[2].is_flex is False
+
+
+def test_an_answer_without_the_flex_flag_falls_back_for_that_post():
+    def answer(prompt):
+        missing = label_for(2)
+        del missing["is_flex"]
+        return [label_for(1), missing]
+
+    result = labeler(FakeGemini(answer)).label_batch(items(1, 2))
+
+    assert result.labels[1] is not None
+    assert result.labels[2] is None
+
+
+def test_the_prompt_defines_a_flex():
+    prompt = build_prompt(items(1))
+    assert FLEX_DEFINITION in prompt
+    assert "Check the scoreboard" in prompt

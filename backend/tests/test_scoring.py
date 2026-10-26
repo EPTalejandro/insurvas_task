@@ -34,6 +34,7 @@ def make_post(
     followers=1000,
     counts=True,
     known_author=True,
+    format=None,
 ) -> PostInput:
     return PostInput(
         post_id=post_id,
@@ -47,6 +48,7 @@ def make_post(
         followers=followers,
         counts=counts,
         known_author=known_author,
+        format=format,
     )
 
 
@@ -452,3 +454,62 @@ def test_unknown_authors_do_not_pull_a_real_creators_baseline():
     ]
     # Only two known posts: not enough for a baseline, even though three share the creator id.
     assert all(r.outperformance is None for r in score_posts(posts, 7, NOW))
+
+
+# --- short-video boost -----------------------------------------------------------------------
+
+
+def _pair(short_format):
+    """Two posts with the same numbers, one long and one short; plus others to rank against."""
+    posts = [make_post(i, likes=10 * i, followers=None) for i in range(1, 9)]
+    posts.append(make_post(100, likes=45, followers=None, format="long_video"))
+    posts.append(make_post(101, likes=45, followers=None, format=short_format))
+    return results_by_id(posts)
+
+
+@pytest.mark.parametrize("short_format", ["short_video", "reel"])
+def test_a_short_video_scores_ten_percent_more_than_the_same_long_video(short_format):
+    results = _pair(short_format)
+    boost = config.FORMAT_BOOST[short_format]
+    assert results[101].score == pytest.approx(results[100].score * boost)
+    assert results[101].rank_in_platform < results[100].rank_in_platform
+
+
+def test_long_videos_and_images_are_not_boosted():
+    plain = results_by_id([make_post(1, likes=40), make_post(2, likes=20)])
+    formatted = results_by_id(
+        [make_post(1, likes=40, format="long_video"), make_post(2, likes=20, format="image")]
+    )
+    assert formatted[1].score == plain[1].score
+    assert formatted[2].score == plain[2].score
+
+
+# Each post gets its own creator, so no creator baseline mixes in: the score is the impact
+# percentile alone, which keeps the arithmetic easy to follow.
+
+
+def test_the_boosted_score_is_capped_at_100():
+    posts = [make_post(i, creator=i, likes=10 * i, followers=None) for i in range(1, 20)]
+    posts.append(make_post(99, creator=99, likes=10_000, followers=None, format="short_video"))
+    # Best of 20 is the 97.5th percentile; × 1.10 would be 107.
+    assert results_by_id(posts)[99].score == 100
+
+
+def test_a_short_video_can_pass_a_slightly_better_long_video():
+    posts = [make_post(i, creator=i, likes=10 * i, followers=None) for i in range(1, 39)]
+    posts.append(make_post(100, creator=100, likes=1000, followers=None, format="long_video"))
+    posts.append(make_post(101, creator=101, likes=999, followers=None, format="short_video"))
+    results = results_by_id(posts)
+    assert results[100].score > 0.9 * 100  # the long video is still very good
+    assert results[101].rank_in_platform < results[100].rank_in_platform
+
+
+def test_the_top_percent_in_the_reason_ignores_the_boost():
+    posts = [
+        make_post(i, creator=i, likes=10 * i, followers=None, format="short_video")
+        for i in range(1, 6)
+    ]
+    best = results_by_id(posts)[5]
+    # Five posts: the best is at the 90th percentile, so "top 10%", even though its score is 99.
+    assert best.score == pytest.approx(99)
+    assert best.reason.endswith("top 10% on YouTube")

@@ -182,6 +182,7 @@ export interface Meta {
     posts: number
     labeled_posts: number
     ranked_posts: number
+    flex_posts: number
   }
 }
 

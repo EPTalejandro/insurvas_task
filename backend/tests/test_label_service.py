@@ -127,8 +127,8 @@ def batch_labeler(answer, *, batch_size=2, name="gemini"):
     return labeler, calls
 
 
-def label_result(topic="iul", relevant=True):
-    return LabelResult(topic, "question", "hook", "none", relevant, 0.9)
+def label_result(topic="iul", relevant=True, flex=False):
+    return LabelResult(topic, "question", "hook", "none", relevant, 0.9, is_flex=flex)
 
 
 def add_posts(session, count, **fields):
@@ -253,3 +253,16 @@ def test_work_is_saved_after_every_batch(session):
         label_posts(session, labeler)
 
     assert len(session.scalars(select(Label)).all()) == 2
+
+
+def test_the_flex_flag_is_stored_and_counted_in_the_run(session):
+    posts = add_posts(session, 3)
+    flexes = {posts[0].id}
+    labeler, _ = batch_labeler(
+        lambda items: {i.post_id: label_result(flex=i.post_id in flexes) for i in items}
+    )
+
+    run = label_posts(session, labeler)
+
+    assert [session.get(Label, p.id).is_flex for p in posts] == [True, False, False]
+    assert "1 flagged as flex" in run.message

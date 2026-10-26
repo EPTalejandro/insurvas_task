@@ -108,6 +108,8 @@ class Label(Base):
     hook_text: Mapped[str | None]
     cta: Mapped[str | None]
     is_relevant: Mapped[bool] = mapped_column(default=True)
+    # Shows off results (income, records, awards) with nothing to learn: labeled, never ranked.
+    is_flex: Mapped[bool] = mapped_column(default=False)
     confidence: Mapped[float | None]
     labeler: Mapped[str]  # rules | gemini
     model: Mapped[str | None]  # resolved Gemini model, e.g. gemini-3.5-flash-lite
