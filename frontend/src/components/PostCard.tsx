@@ -21,6 +21,9 @@ function Metric({ name, value }: { name: string; value: number | null }) {
  */
 function Thumb({ post }: { post: Post }) {
   const [broken, setBroken] = useState(false)
+  // Taller than wide (Reels, portrait images): known only once the image loads, since the API
+  // gives no size. The CSS then makes the box taller so the picture is not tiny.
+  const [tall, setTall] = useState(false)
   if (post.thumbnail_url && !broken) {
     return (
       <img
@@ -28,6 +31,8 @@ function Thumb({ post }: { post: Post }) {
         alt=""
         loading="lazy"
         referrerPolicy="no-referrer"
+        className={tall ? 'tall' : undefined}
+        onLoad={(event) => setTall(event.currentTarget.naturalHeight > event.currentTarget.naturalWidth)}
         onError={() => setBroken(true)}
       />
     )

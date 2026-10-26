@@ -314,7 +314,11 @@ td .score-bar { height: 2px; margin-top: 0.2rem; }
   overflow: hidden;
   background: var(--wash);
 }
-.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* contain, not cover: a vertical Reel or portrait image is shown whole instead of losing up to
+   two thirds of it. The leftover space is dark in both themes, like a video player. */
+.thumb img { width: 100%; height: 100%; object-fit: contain; background: #0c1824; display: block; }
+/* A vertical picture gets a 4:5 box (twice as tall), so a Reel is not a thin strip. */
+.thumb:has(img.tall) { aspect-ratio: 4 / 5; }
 .thumb-empty { display: grid; place-items: center; height: 100%; padding: 0.5rem; text-align: center; color: var(--slate); font-size: 0.875rem; }
 .pager { display: flex; gap: 1.25rem; align-items: center; justify-content: center; margin-top: 2rem; font-size: 0.9375rem; color: var(--slate); }
 
