@@ -2,7 +2,6 @@ import pytest
 
 from app import runs
 from app.config import Settings, get_settings
-from app.discovery.keywords import seed_keywords
 from app.main import app
 from app.ranking import config
 from tests.api_data import build_dataset
@@ -367,15 +366,21 @@ def test_runs_come_newest_first(client, session, data):
     assert len(client.get("/api/runs", params={"limit": 1}).json()) == 1
 
 
-def test_keywords_are_listed_with_their_platform(client, session):
-    seed_keywords(session)
+def test_a_fresh_database_has_no_keywords(client):
+    # Nothing is built in: every search term and hashtag is added in the Sources tab.
+    assert client.get("/api/keywords").json() == []
+
+
+def test_keywords_are_listed_with_their_platform(client):
+    client.post("/api/keywords", json={"term": "life insurance agent"})
+    client.post("/api/keywords", json={"term": "lifeinsurance", "platform": "instagram"})
 
     items = client.get("/api/keywords").json()
 
-    assert {"term": "lifeinsurance", "platform": "instagram", "active": True}.items() <= next(
-        k for k in items if k["term"] == "lifeinsurance"
-    ).items()
-    assert any(k["platform"] is None for k in items)
+    assert [(k["term"], k["platform"], k["active"]) for k in items] == [
+        ("life insurance agent", None, True),
+        ("lifeinsurance", "instagram", True),
+    ]
 
 
 # --- changing keywords and the hashtag budget ------------------------------------------------

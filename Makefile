@@ -12,7 +12,6 @@ setup: ## Install everything and create backend/.env and the database
 	cd frontend && pnpm install
 	test -f backend/.env || cp backend/.env.example backend/.env
 	$(CLI) init-db
-	$(CLI) seed
 
 build: ## Build the frontend (the API serves it from frontend/dist)
 	cd frontend && pnpm build
@@ -32,9 +31,8 @@ discover: ## Find competitors on YouTube (about 3,000 quota units)
 refresh: ## Collect, label and rank (add DISCOVER=1 to discover first)
 	$(CLI) refresh $(if $(DISCOVER),--discover)
 
-reset: ## Delete ALL stored data, then seed the search terms again
+reset: ## Delete ALL stored data, search terms included
 	$(CLI) reset-db --yes
-	$(CLI) seed
 
 test: ## Backend tests, lint and format check, then frontend lint and build
 	cd backend && uv run pytest -q && uv run ruff check . && uv run ruff format --check .

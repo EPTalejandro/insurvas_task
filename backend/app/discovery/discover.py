@@ -26,15 +26,22 @@ from app.models import Competitor, Creator, Keyword, Run
 MAX_PAGES_PER_KEYWORD = 3
 
 
+def _search_terms(session: Session) -> list[Keyword]:
+    """The active YouTube search terms, added by users in the Sources tab."""
+    return list(
+        session.scalars(
+            select(Keyword).where(
+                Keyword.active, or_(Keyword.platform.is_(None), Keyword.platform == "youtube")
+            )
+        )
+    )
+
+
 def _search_channel_ids(
     session: Session, client: httpx.Client, settings: Settings, now: datetime
 ) -> tuple[dict[str, str], int, int, str | None]:
     """Search every active keyword. Returns (channel_id -> keyword, quota used, failures, error)."""
-    keywords = session.scalars(
-        select(Keyword).where(
-            Keyword.active, or_(Keyword.platform.is_(None), Keyword.platform == "youtube")
-        )
-    ).all()
+    keywords = _search_terms(session)
     published_after = (now - timedelta(days=settings.lookback_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     # Spread the quota budget over the keywords: a few pages each, but at least one.
     searches_allowed = settings.youtube_discovery_quota // SEARCH_COST
@@ -164,6 +171,11 @@ def discover_youtube(
 ) -> Run:
     now = now or datetime.now(UTC)
     run = runs.start_run(session, "discover", "youtube")
+    if not _search_terms(session):
+        # A fresh database has no terms: they are all added in the Sources tab.
+        return runs.finish_run(
+            session, run, status=runs.OK, message="no search terms: add some in the Sources tab"
+        )
 
     found, quota, failures, last_error = _search_channel_ids(session, client, settings, now)
 

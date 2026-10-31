@@ -238,7 +238,7 @@ def test_no_hashtags_means_nothing_to_do(session):
     run = run_collect(session, fake)
 
     assert run.status == "ok"
-    assert run.message == "no hashtags configured"
+    assert run.message == "no hashtags: add some in the Sources tab"
     assert fake.calls == []
 
 

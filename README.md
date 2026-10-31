@@ -18,14 +18,22 @@ Prerequisites: Python 3.13 with [uv](https://docs.astral.sh/uv/), Node.js 22 wit
 (`corepack install -g pnpm@10`), and `make`.
 
 ```bash
-make setup      # installs both sides, creates backend/.env, creates the database, seeds search terms
+make setup      # installs both sides, creates backend/.env and an empty database
 ```
 
-Then put your keys in `backend/.env` (see [Configuration](#configuration)) and fill the database:
+Then put your keys in `backend/.env` (see [Configuration](#configuration)), add search terms, and
+fill the database:
+
+```bash
+make run                  # build the frontend and serve everything on http://localhost:8000
+```
+
+A new database has **no search terms or hashtags**: add them in the **Sources** tab (YouTube
+search terms such as "life insurance agent", Instagram hashtags such as `#lifeinsurance`). Then,
+in a second terminal:
 
 ```bash
 make refresh DISCOVER=1   # find competitors, collect their posts, label, rank
-make run                  # build the frontend and serve everything on http://localhost:8000
 ```
 
 `make run` is the one-process demo: FastAPI serves the API under `/api` and the built frontend at
@@ -71,18 +79,18 @@ and `NOTES.md`. Settings live in `backend/app/ranking/config.py`.
 
 | Make target | What it does |
 |---|---|
-| `make setup` | Install, create `.env` and the database, seed the search terms |
+| `make setup` | Install, create `.env` and an empty database |
 | `make refresh` | Collect, label and rank (`DISCOVER=1` finds competitors first) |
 | `make run` | Build the frontend and serve app and API on port 8000 |
 | `make dev-api` / `make dev-web` | Development: backend with reload on :8000, Vite on :5173 (proxies `/api`) |
 | `make discover` | Only the discovery step (about 3,000 quota units) |
-| `make reset` | Delete all stored data and seed again |
+| `make reset` | Delete all stored data, search terms included |
 | `make test` | Backend tests and lint, then frontend lint and build |
 
 The same steps are available one by one, from `backend/`:
 
 ```bash
-uv run python -m app.cli init-db | reset-db --yes | seed
+uv run python -m app.cli init-db | reset-db --yes
 uv run python -m app.cli discover
 uv run python -m app.cli collect [--platform youtube|instagram]
 uv run python -m app.cli label [--force] [--limit 100]

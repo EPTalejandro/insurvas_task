@@ -71,6 +71,19 @@ def test_discover_keeps_agents_and_agencies_and_drops_the_rest(session):
     assert run.items_ok == 5
 
 
+def test_without_search_terms_nothing_is_searched(session):
+    # A fresh database has no terms: they are all added in the Sources tab.
+    fake = FakeYouTube()
+    session.add(Keyword(term="off", platform=None, active=False))
+    session.commit()
+
+    run = run_discover(session, fake)
+
+    assert (run.status, run.quota_used) == ("ok", 0)
+    assert run.message == "no search terms: add some in the Sources tab"
+    assert fake.calls == []
+
+
 def test_discover_twice_does_not_duplicate(session):
     add_keywords(session, "life insurance agent")
     fake = FakeYouTube()

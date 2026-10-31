@@ -215,7 +215,11 @@ def collect_hashtags(
         status = runs.PARTIAL
     else:
         status = runs.ERROR
-    message = f"{saved} posts from {ok} hashtags" if keywords else "no hashtags configured"
+    message = (
+        f"{saved} posts from {ok} hashtags"
+        if keywords
+        else "no hashtags: add some in the Sources tab"
+    )
     if last_error:
         message += f"; last error: {last_error}"
     return runs.finish_run(

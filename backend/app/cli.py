@@ -3,7 +3,6 @@ import typer
 from app.config import get_settings
 from app.db import SessionLocal, init_db, reset_db
 from app.discovery.discover import discover_youtube
-from app.discovery.keywords import seed_keywords
 from app.httpclient import make_client
 from app.labeling.service import label_posts
 from app.pipeline import (
@@ -35,14 +34,6 @@ def reset_db_command(
         raise typer.Exit(code=1)
     reset_db()
     typer.echo("Database reset.")
-
-
-@cli.command("seed")
-def seed_command() -> None:
-    """Add the default discovery keywords (safe to run more than once)."""
-    with SessionLocal() as session:
-        added = seed_keywords(session)
-    typer.echo(f"Added {added} keywords.")
 
 
 def _youtube_ready(platform: str | None) -> bool:
