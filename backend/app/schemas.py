@@ -1,8 +1,8 @@
-"""Response models of the HTTP API. The frontend mirrors them in `frontend/src/types.ts`."""
+"""Request and response models of the HTTP API. The frontend mirrors them in `src/types.ts`."""
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # --- shared pieces -------------------------------------------------------------------------
 
@@ -229,3 +229,29 @@ class KeywordOut(BaseModel):
     term: str
     platform: str | None
     active: bool
+
+
+class KeywordIn(BaseModel):
+    """A new search term (platform None) or hashtag (platform "instagram")."""
+
+    term: str = Field(max_length=200)
+    platform: str | None = None
+
+
+class KeywordPatch(BaseModel):
+    active: bool
+
+
+class HashtagSlotOut(BaseModel):
+    tag: str
+    frees_at: datetime
+
+
+class HashtagBudgetOut(BaseModel):
+    """Instagram allows 30 different hashtags per 7 days; a repeated search takes no new slot."""
+
+    limit: int
+    used: int
+    free: int
+    next_free_at: datetime | None
+    slots: list[HashtagSlotOut]  # soonest to free first

@@ -205,3 +205,12 @@ export interface Keyword {
   platform: string | null
   active: boolean
 }
+
+// Instagram allows 30 different hashtags per 7 days; a repeated search takes no new slot.
+export interface HashtagBudget {
+  limit: number
+  used: number
+  free: number
+  next_free_at: string | null
+  slots: { tag: string; frees_at: string }[]
+}

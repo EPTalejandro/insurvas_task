@@ -179,6 +179,7 @@ def collect_hashtags(
 
     ok = failed = saved = 0
     last_error = None
+    searched: list[str] = []  # each one takes a weekly hashtag slot, found or not
     for keyword in keywords:
         tag = keyword.term.lstrip("#")
         try:
@@ -189,6 +190,7 @@ def collect_hashtags(
             if "code 190" in last_error or "code 4)" in last_error:
                 break  # every other call would fail the same way
             continue
+        searched.append(tag.lower())
         if hashtag_id is None:
             failed += 1
             last_error = f"hashtag #{tag} not found"
@@ -217,5 +219,11 @@ def collect_hashtags(
     if last_error:
         message += f"; last error: {last_error}"
     return runs.finish_run(
-        session, run, status=status, items_ok=ok, items_failed=failed, message=message
+        session,
+        run,
+        status=status,
+        items_ok=ok,
+        items_failed=failed,
+        message=message,
+        hashtags=searched,
     )

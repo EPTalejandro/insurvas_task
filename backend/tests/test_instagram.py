@@ -288,3 +288,33 @@ def test_hashtag_requests_never_ask_for_thumbnail_url(session):
     assert run.status == "ok"
     fields = [params["fields"] for name, params in fake.calls if name == "top_media"]
     assert fields and all("media_url" in f and "thumbnail_url" not in f for f in fields)
+
+
+# --- hashtag budget ------------------------------------------------------------------------
+
+
+def test_the_run_records_every_hashtag_it_searched(session):
+    add_hashtag(session, "LifeInsurance")
+    add_hashtag(session, "iul")
+    fake = FakeInstagram()
+
+    run = run_collect(session, fake)
+
+    # Lowercase, so "LifeInsurance" and "lifeinsurance" count as one of the 30 weekly slots.
+    assert run.hashtags == "lifeinsurance,iul"
+
+
+def test_a_hashtag_that_is_not_found_still_takes_a_slot(session):
+    add_hashtag(session, "nosuchtag")
+    fake = FakeInstagram()
+    fake.hashtag_missing = True
+
+    assert run_collect(session, fake).hashtags == "nosuchtag"
+
+
+def test_a_failed_search_takes_no_slot(session):
+    add_hashtag(session, "one")
+    fake = FakeInstagram()
+    fake.token_expired = True
+
+    assert run_collect(session, fake).hashtags is None

@@ -378,6 +378,74 @@ def test_keywords_are_listed_with_their_platform(client, session):
     assert any(k["platform"] is None for k in items)
 
 
+# --- changing keywords and the hashtag budget ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("term", "platform", "stored"),
+    [
+        ("whole life insurance agent", None, "whole life insurance agent"),
+        ("#FinalExpense", "instagram", "finalexpense"),
+    ],
+)
+def test_search_terms_and_hashtags_can_be_added_toggled_and_deleted(client, term, platform, stored):
+    added = client.post("/api/keywords", json={"term": term, "platform": platform})
+    assert added.status_code == 201
+    keyword = added.json()
+    assert (keyword["term"], keyword["platform"], keyword["active"]) == (stored, platform, True)
+
+    again = client.post("/api/keywords", json={"term": term.upper(), "platform": platform})
+    assert again.status_code == 409
+
+    off = client.patch(f"/api/keywords/{keyword['id']}", json={"active": False})
+    assert (off.status_code, off.json()["active"]) == (200, False)
+
+    assert client.delete(f"/api/keywords/{keyword['id']}").status_code == 204
+    assert client.delete(f"/api/keywords/{keyword['id']}").status_code == 404
+    assert client.patch(f"/api/keywords/{keyword['id']}", json={"active": True}).status_code == 404
+    assert client.get("/api/keywords").json() == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"term": "life insurance", "platform": "instagram"},  # a hashtag has no spaces
+        {"term": "a"},  # too short
+        {"term": "agent", "platform": "tiktok"},
+        {"platform": "instagram"},  # no term
+    ],
+)
+def test_bad_keywords_are_a_422(client, body):
+    response = client.post("/api/keywords", json=body)
+    assert response.status_code == 422
+
+
+def test_a_keyword_id_too_big_for_sqlite_is_a_422(client):
+    assert client.delete(f"/api/keywords/{2**63}").status_code == 422
+
+
+def test_the_hashtag_budget_counts_different_hashtags_of_the_last_7_days(client, session):
+    run = runs.start_run(session, "collect", "instagram")
+    runs.finish_run(session, run, status=runs.OK, hashtags=["iul", "lifeinsurance"])
+    run = runs.start_run(session, "collect", "instagram")
+    runs.finish_run(session, run, status=runs.OK, hashtags=["iul"])  # same tag: same slot
+
+    budget = client.get("/api/hashtag-budget").json()
+
+    assert (budget["limit"], budget["used"], budget["free"]) == (30, 2, 28)
+    assert {slot["tag"] for slot in budget["slots"]} == {"iul", "lifeinsurance"}
+    assert budget["next_free_at"].endswith("Z")
+
+
+def test_the_hashtag_budget_is_empty_when_30_hashtags_were_searched(client, session):
+    run = runs.start_run(session, "collect", "instagram")
+    runs.finish_run(session, run, status=runs.OK, hashtags=[f"tag{i}" for i in range(30)])
+
+    budget = client.get("/api/hashtag-budget").json()
+
+    assert (budget["used"], budget["free"]) == (30, 0)
+
+
 # --- serving the built frontend --------------------------------------------------------------
 
 

@@ -359,7 +359,20 @@ td .flags { display: flex; flex-wrap: wrap; gap: 0.1rem 0.9rem; margin-top: 0.25
 .evidence { display: block; color: var(--slate); font-size: 0.875rem; }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem 3rem; }
 .facts p { margin: 0; color: var(--slate); font-size: 0.9375rem; }
-.help-list li { display: grid; grid-template-columns: 8rem 1fr; gap: 0.75rem; align-items: baseline; }
+.term-panel h4 { margin: 1rem 0 0.5rem; }
+.term-add { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
+/* Pico makes inputs and submit buttons full width; here the input takes the room, the button fits. */
+.term-add input { flex: 1 1 auto; min-width: 0; width: auto; margin: 0; }
+.term-add button[type='submit'] { flex: none; width: auto; }
+.term-error { color: var(--poppy); font-size: 0.9375rem; }
+.term-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1rem; }
+.term-list label { flex: 1; margin: 0; }
+.term-list small { color: var(--slate); font-size: 0.875rem; }
+.term-list .inactive label { color: var(--slate); }
+.term-delete { font-size: 0.875rem; color: var(--slate); }
+.term-delete:hover { color: var(--poppy); }
+.dropdown-section { margin-top: 2rem; }
+.dropdown-section summary { font-weight: 700; cursor: pointer; }
 
 /* ---- insights ---- */
 .bars { list-style: none; margin: 1.5rem 0; padding: 0; border-top: 1px solid var(--ink); }
@@ -399,7 +412,6 @@ td .flags { display: flex; flex-wrap: wrap; gap: 0.1rem 0.9rem; margin-top: 0.25
   .post-lead .post-title { font-size: 1.25rem; }
   h2 { font-size: 2rem; }
   .bar-row { grid-template-columns: 6.5rem 1fr 2.75rem; gap: 0.1rem 0.75rem; }
-  .help-list li { grid-template-columns: 1fr; gap: 0.1rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -23,7 +23,9 @@ app = FastAPI(title="Competitor Content Intelligence", version="0.1.0", lifespan
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
-    allow_methods=["*"],
+    # Writes exist only for keywords. Their JSON bodies need a preflight, so a page from another
+    # origin cannot change them from a browser.
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 

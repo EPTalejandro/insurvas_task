@@ -2,20 +2,37 @@
 // them in development.
 import type { GroupBy } from './url.ts'
 
+/**
+ * The API explains bad requests in `detail`: a sentence (for example the allowed windows), or
+ * FastAPI's list of field errors, whose first message is enough here.
+ */
+async function errorMessage(response: Response): Promise<string> {
+  let message = `${response.status} ${response.statusText}`
+  try {
+    const body = (await response.json()) as { detail?: unknown }
+    if (typeof body.detail === 'string') message = body.detail
+    else if (Array.isArray(body.detail) && typeof body.detail[0]?.msg === 'string') message = body.detail[0].msg
+  } catch {
+    // The body was not JSON: keep the status text.
+  }
+  return message
+}
+
 export async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path)
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`
-    try {
-      // The API explains bad requests in `detail` (for example the allowed windows).
-      const body = (await response.json()) as { detail?: unknown }
-      if (typeof body.detail === 'string') message = body.detail
-    } catch {
-      // The body was not JSON: keep the status text.
-    }
-    throw new Error(message)
-  }
+  if (!response.ok) throw new Error(await errorMessage(response))
   return response.json() as Promise<T>
+}
+
+/** A change (only keywords can be changed). Returns the answer, or null for 204 No Content. */
+export async function sendJson<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T | null> {
+  const response = await fetch(path, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!response.ok) throw new Error(await errorMessage(response))
+  return response.status === 204 ? null : (response.json() as Promise<T>)
 }
 
 type Param = string | number | boolean | null | undefined
@@ -44,6 +61,11 @@ export interface PostsQuery {
 export const metaUrl = '/api/meta'
 export const runsUrl = '/api/runs?limit=12'
 export const keywordsUrl = '/api/keywords'
+export const hashtagBudgetUrl = '/api/hashtag-budget'
+
+export function keywordUrl(id: number): string {
+  return `${keywordsUrl}/${id}`
+}
 
 export function postsUrl(q: PostsQuery): string {
   return `/api/posts${query({

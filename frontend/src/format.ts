@@ -32,6 +32,20 @@ export function relativeTime(iso: string | null | undefined, now: number = Date.
   return new Date(iso).toLocaleDateString()
 }
 
+/** "in 6d", "in 5h": how long until a future moment. `now` is a parameter, like relativeTime. */
+export function untilTime(iso: string, now: number = Date.now()): string {
+  const minutes = Math.max(1, Math.ceil((new Date(iso).getTime() - now) / 60000))
+  if (minutes < 60) return `in ${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `in ${hours}h`
+  return `in ${Math.floor(hours / 24)}d`
+}
+
+/** "Nov 6" */
+export function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 const ACRONYMS: Record<string, string> = { iul: 'IUL', cta: 'CTA' }
 
 /** "final_expense" -> "Final expense", "iul" -> "IUL" */

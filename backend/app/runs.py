@@ -30,12 +30,14 @@ def finish_run(
     items_failed: int = 0,
     quota_used: int = 0,
     message: str | None = None,
+    hashtags: list[str] | None = None,
 ) -> Run:
     run.status = status
     run.items_ok = items_ok
     run.items_failed = items_failed
     run.quota_used = quota_used
     run.message = message
+    run.hashtags = ",".join(hashtags) if hashtags else None
     run.finished_at = utcnow()
     session.commit()
     return run

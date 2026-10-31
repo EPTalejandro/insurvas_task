@@ -113,7 +113,12 @@ Interactive docs at http://localhost:8000/docs. All data endpoints take `window=
 | `GET /api/competitors/{id}` | one competitor: accounts, scores per window, top posts |
 | `GET /api/insights` | average score per `group_by=hook_type`, `topic` or `format`, optional `platform` |
 | `GET /api/runs`, `GET /api/keywords` | pipeline history and search terms |
+| `POST /api/keywords`, `PATCH`/`DELETE /api/keywords/{id}` | add a search term (`platform` empty) or hashtag (`instagram`), turn it on or off, delete it |
+| `GET /api/hashtag-budget` | Instagram's 30 different hashtags per 7 days: used, free, when each slot frees |
 | `GET /api/health` | `{"status": "ok"}` |
+
+Keywords are the only thing the API can change. There is no login, so keep the server local;
+other websites cannot change them from a browser (CORS allows only the dev origin).
 
 `format` takes `long_video`, `short_video` or `image` (Reels count as short videos, carousels as
 images).
@@ -122,7 +127,8 @@ images).
 
 The UI has four tabs: **Top content** (ranked posts with filters), **Competitors** (leaderboard and
 a page per competitor), **Insights** (average score per hook, topic or format) and **Sources**
-(platforms, search terms, recent runs, and how "US-based" is decided). Everything you pick (tab,
+(platforms, search terms and hashtags you can add, turn on or off and delete, the hashtag budget,
+and the recent runs behind a dropdown). Everything you pick (tab,
 window, platform, filters) is in the URL, so a view can be shared.
 
 For development, run the backend (`make dev-api`) and the frontend (`make dev-web`) in two
@@ -140,7 +146,10 @@ terminals. Frontend commands, from `frontend/`: `pnpm dev`, `pnpm lint`, `pnpm b
   shows a text placeholder.
 - **YouTube** exposes no share counts, and Shorts are detected by duration (3 minutes or less).
 - **US-based is a judgment** from the channel country, phone numbers, license mentions and, for
-  the unclear cases, Gemini quoting the text it relied on. The Sources tab explains each status.
+  the unclear cases, Gemini quoting the text it relied on. Hover a badge to see its evidence.
+- **Instagram allows 30 different hashtags per 7 days.** Each hashtag run records the hashtags it
+  searched (`runs.hashtags`); the Sources tab counts the slots from that. A database made before
+  this column existed needs `ALTER TABLE runs ADD COLUMN hashtags VARCHAR;`.
 
 ## Tests
 

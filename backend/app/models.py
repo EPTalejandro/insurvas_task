@@ -180,5 +180,8 @@ class Run(Base):
     items_failed: Mapped[int] = mapped_column(default=0)
     quota_used: Mapped[int] = mapped_column(default=0)
     message: Mapped[str | None]
+    # Hashtags this run searched, comma-separated. Instagram allows 30 different hashtags per
+    # 7 days, and this is how the Sources tab knows how many are left.
+    hashtags: Mapped[str | None]
     started_at: Mapped[datetime] = mapped_column(default=utcnow)
     finished_at: Mapped[datetime | None]
