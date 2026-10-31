@@ -106,7 +106,12 @@ def _check_candidates(
     return usable, confirmed, None
 
 
-def link_instagram_accounts(session: Session, client: httpx.Client, settings: Settings) -> Run:
+def link_instagram_accounts(
+    session: Session,
+    client: httpx.Client,
+    settings: Settings,
+    progress: runs.Progress | None = None,
+) -> Run:
     """Link each unlinked competitor to its Instagram account when the evidence is clear."""
     run = runs.start_run(session, "link", "instagram")
     decisions: dict[int, LinkDecision] = {}
@@ -115,7 +120,9 @@ def link_instagram_accounts(session: Session, client: httpx.Client, settings: Se
     last_error = None
 
     competitors = _unlinked_competitors(session)
-    for competitor in competitors:
+    for index, competitor in enumerate(competitors):
+        if progress:
+            progress(index, len(competitors))
         channel = session.scalars(
             select(Creator).where(
                 Creator.competitor_id == competitor.id, Creator.platform == "youtube"
@@ -224,7 +231,11 @@ def _read_account_media(
 
 
 def collect_instagram_accounts(
-    session: Session, client: httpx.Client, settings: Settings, now: datetime | None = None
+    session: Session,
+    client: httpx.Client,
+    settings: Settings,
+    now: datetime | None = None,
+    progress: runs.Progress | None = None,
 ) -> Run:
     """Collect the recent posts of every linked account. One bad account never stops the run."""
     now = now or datetime.now(UTC)
@@ -234,7 +245,9 @@ def collect_instagram_accounts(
 
     ok = failed = saved = 0
     last_error = None
-    for creator in creators:
+    for index, creator in enumerate(creators):
+        if progress:
+            progress(index, len(creators))
         try:
             profile, posts = _read_account_media(client, settings, creator.handle, cutoff)
         except ApiError as error:

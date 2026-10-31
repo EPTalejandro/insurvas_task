@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useApp } from '../context.ts'
-import { LOCATION_LABELS, humanize, scoreLevel } from '../format.ts'
+import { LOCATION_LABELS, humanize, scoreLevel, statusTone } from '../format.ts'
 import type { Location } from '../types.ts'
 
 /** The 0-100 score as a large numeral with a bar under it. The top tier is red, the good tier navy. */
@@ -31,6 +31,5 @@ export function LocationBadge({ location }: { location: Location }) {
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const tone = status === 'ok' ? 'yes' : status === 'partial' ? 'maybe' : status === 'error' ? 'no' : 'unknown'
-  return <span className={`flag tone-${tone}`}>{status}</span>
+  return <span className={`flag tone-${statusTone(status)}`}>{status}</span>
 }

@@ -312,6 +312,24 @@ def test_a_hashtag_that_is_not_found_still_takes_a_slot(session):
     assert run_collect(session, fake).hashtags == "nosuchtag"
 
 
+def test_given_hashtags_replace_the_active_ones(session):
+    add_hashtag(session, "lifeinsurance")
+    fake = FakeInstagram()
+    reports = []
+
+    collect_hashtags(
+        session,
+        fake.client(),
+        make_settings(),
+        now=NOW,
+        terms=["iul", "annuity"],
+        progress=lambda done, total: reports.append((done, total)),
+    )
+
+    assert fake.queries() == ["iul", "annuity"]
+    assert reports == [(0, 2), (1, 2)]
+
+
 def test_a_failed_search_takes_no_slot(session):
     add_hashtag(session, "one")
     fake = FakeInstagram()

@@ -1,8 +1,11 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
-from app import runs
+from app import jobs, runs
 from app.config import Settings, get_settings
 from app.main import app
+from app.models import Job
 from app.ranking import config
 from tests.api_data import build_dataset
 
@@ -485,3 +488,77 @@ def test_without_a_build_nothing_is_mounted(tmp_path):
     small = FastAPI()
     assert mount_frontend(small, tmp_path) is False
     assert not any(route.name == "frontend" for route in small.routes)
+
+
+# --- searches (jobs) -----------------------------------------------------------------------------
+
+
+def test_a_scheduled_search_is_listed_with_pending_steps(client):
+    run_at = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
+
+    created = client.post("/api/jobs", json={"steps": ["rank", "label"], "run_at": run_at})
+
+    assert created.status_code == 201
+    job = created.json()
+    assert job["status"] == "scheduled"
+    assert [(s["step"], s["status"]) for s in job["steps"]] == [
+        ("label", "pending"),
+        ("rank", "pending"),
+    ]
+    assert job["steps"][0]["label"] == "Label posts"
+    assert job["run_at"].endswith("Z") or job["run_at"].endswith("+00:00")
+    assert [j["id"] for j in client.get("/api/jobs").json()] == [job["id"]]
+    assert client.get(f"/api/jobs/{job['id']}").json() == job
+
+
+def test_a_search_without_a_time_starts_now(client):
+    job = client.post("/api/jobs", json={"steps": ["rank"]}).json()
+
+    started = datetime.fromisoformat(job["run_at"])
+    assert abs((started - datetime.now(UTC)).total_seconds()) < 60
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ({"steps": []}, "pick at least one step"),
+        ({"steps": ["scrape"]}, "unknown step"),
+        ({"steps": ["discover"]}, "discover needs at least one YouTube search term"),
+        ({"steps": ["hashtags"], "hashtags": ["life insurance"]}, "one word"),
+        ({"steps": ["rank"], "run_at": "2020-01-01T00:00:00Z"}, "already passed"),
+    ],
+)
+def test_a_search_that_cannot_run_is_a_422(client, body, message):
+    response = client.post("/api/jobs", json=body)
+
+    assert response.status_code == 422
+    assert message in response.json()["detail"]
+
+
+def test_only_a_scheduled_search_can_be_cancelled(client, session):
+    run_at = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
+    planned = client.post("/api/jobs", json={"steps": ["rank"], "run_at": run_at}).json()
+    finished = client.post("/api/jobs", json={"steps": ["rank"], "run_at": run_at}).json()
+    session.get(Job, finished["id"]).status = "ok"
+    session.commit()
+
+    assert client.delete(f"/api/jobs/{planned['id']}").status_code == 204
+    assert client.get(f"/api/jobs/{planned['id']}").status_code == 404
+    assert client.delete(f"/api/jobs/{finished['id']}").status_code == 409
+    assert client.delete("/api/jobs/999").status_code == 404
+    assert client.delete(f"/api/jobs/{2**63}").status_code == 422
+
+
+def test_a_running_step_shows_its_live_progress(client, session):
+    job = client.post("/api/jobs", json={"steps": ["label"]}).json()
+    stored = session.get(Job, job["id"])
+    stored.status = "running"
+    stored.steps[0].status = "running"
+    session.commit()
+    jobs._live[stored.steps[0].id] = (40, 120, None)
+    try:
+        step = client.get(f"/api/jobs/{job['id']}").json()["steps"][0]
+    finally:
+        jobs._live.clear()
+
+    assert (step["done"], step["total"]) == (40, 120)

@@ -4,6 +4,8 @@ Two calls per step: start_run before the work, finish_run after it.
 A failed run still gets finished, so the Sources tab never shows a run stuck in "running".
 """
 
+from collections.abc import Callable
+
 from sqlalchemy.orm import Session
 
 from app.models import Run, utcnow
@@ -12,6 +14,9 @@ RUNNING = "running"
 OK = "ok"
 PARTIAL = "partial"  # some items worked, some failed
 ERROR = "error"
+
+# A step reports (items done, items in total) through this, so the Search tab can draw a bar.
+Progress = Callable[[int, int], None]
 
 
 def start_run(session: Session, kind: str, platform: str | None = None) -> Run:

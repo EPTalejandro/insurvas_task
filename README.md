@@ -29,8 +29,9 @@ make run                  # build the frontend and serve everything on http://lo
 ```
 
 A new database has **no search terms or hashtags**: add them in the **Sources** tab (YouTube
-search terms such as "life insurance agent", Instagram hashtags such as `#lifeinsurance`). Then,
-in a second terminal:
+search terms such as "life insurance agent", Instagram hashtags such as `#lifeinsurance`). Then
+start a search in the **Search** tab (tick "Discover YouTube channels" the first time), or from
+a second terminal:
 
 ```bash
 make refresh DISCOVER=1   # find competitors, collect their posts, label, rank
@@ -123,18 +124,28 @@ Interactive docs at http://localhost:8000/docs. All data endpoints take `window=
 | `GET /api/runs`, `GET /api/keywords` | pipeline history and search terms |
 | `POST /api/keywords`, `PATCH`/`DELETE /api/keywords/{id}` | add a search term (`platform` empty) or hashtag (`instagram`), turn it on or off, delete it |
 | `GET /api/hashtag-budget` | Instagram's 30 different hashtags per 7 days: used, free, when each slot frees |
+| `GET /api/jobs`, `GET /api/jobs/{id}` | searches started from the Search tab, with the progress of each step |
+| `POST /api/jobs` | start a search now (`run_at` empty) or at a time: `steps` (`discover`, `youtube`, `instagram_accounts`, `hashtags`, `label`, `rank`), `youtube_terms`, `hashtags` |
+| `DELETE /api/jobs/{id}` | cancel a scheduled search (409 once it has started) |
 | `GET /api/health` | `{"status": "ok"}` |
 
-Keywords are the only thing the API can change. There is no login, so keep the server local;
-other websites cannot change them from a browser (CORS allows only the dev origin).
+Keywords and searches are the only things the API can change. There is no login, so keep the
+server local; other websites cannot change them from a browser (CORS allows only the dev origin).
+
+Searches run in one background thread of the API server (`app/scheduler.py`), one at a time, so a
+scheduled search only starts while the server runs (a missed one starts when it comes back). Do
+not run `make refresh` while a search is running: both would write to SQLite at once.
+`SCHEDULER_ENABLED=false` turns the thread off.
 
 `format` takes `long_video`, `short_video` or `image` (Reels count as short videos, carousels as
 images).
 
 ## Frontend
 
-The UI has four tabs: **Top content** (ranked posts with filters), **Competitors** (leaderboard and
-a page per competitor), **Insights** (average score per hook, topic or format) and **Sources**
+The UI has five tabs: **Top content** (ranked posts with filters), **Competitors** (leaderboard and
+a page per competitor), **Insights** (average score per hook, topic or format), **Search** (run a
+search now or at a set time, pick its steps and terms, and watch one progress bar per step) and
+**Sources**
 (platforms, search terms and hashtags you can add, turn on or off and delete, the hashtag budget,
 and the recent runs behind a dropdown). Everything you pick (tab,
 window, platform, filters) is in the URL, so a view can be shared.

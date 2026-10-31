@@ -2,6 +2,7 @@ import { metaUrl } from './api.ts'
 import { Competitors } from './components/Competitors.tsx'
 import { Header } from './components/Header.tsx'
 import { Insights } from './components/Insights.tsx'
+import { Search } from './components/Search.tsx'
 import { Sources } from './components/Sources.tsx'
 import { ErrorBox, Loading } from './components/StateViews.tsx'
 import { TopContent } from './components/TopContent.tsx'
@@ -38,6 +39,7 @@ export default function App() {
         {state.tab === 'content' && <TopContent />}
         {state.tab === 'competitors' && <Competitors />}
         {state.tab === 'insights' && <Insights />}
+        {state.tab === 'search' && <Search />}
         {state.tab === 'sources' && <Sources />}
       </main>
     </AppContext.Provider>

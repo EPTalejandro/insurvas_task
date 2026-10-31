@@ -84,6 +84,26 @@ def test_without_search_terms_nothing_is_searched(session):
     assert fake.calls == []
 
 
+def test_given_terms_are_searched_even_when_inactive(session):
+    # A search from the Search tab picks its own terms; the active flag is only the default.
+    session.add(Keyword(term="off", platform=None, active=False))
+    add_keywords(session, "on")
+    fake = FakeYouTube()
+    reports = []
+
+    discover_youtube(
+        session,
+        fake.client(),
+        make_settings(),
+        now=NOW,
+        terms=["off"],
+        progress=lambda done, total: reports.append((done, total)),
+    )
+
+    assert [params["q"] for path, params in fake.calls if path == "/search"] == ["off"]
+    assert reports == [(0, 1)]
+
+
 def test_discover_twice_does_not_duplicate(session):
     add_keywords(session, "life insurance agent")
     fake = FakeYouTube()

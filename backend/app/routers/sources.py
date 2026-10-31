@@ -1,7 +1,7 @@
 """What the app collected from and when: pipeline runs, the search keywords and the hashtag budget.
 
-Keywords are the only thing the web can change. They are used on the next pipeline run
-(`refresh`), which still runs from the command line.
+Keywords are used by the next search: one started in the Search tab, or `refresh` from the
+command line.
 """
 
 from datetime import UTC, datetime, timedelta

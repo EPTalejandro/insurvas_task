@@ -26,11 +26,14 @@ from app.models import Competitor, Creator, Keyword, Run
 MAX_PAGES_PER_KEYWORD = 3
 
 
-def _search_terms(session: Session) -> list[Keyword]:
-    """The active YouTube search terms, added by users in the Sources tab."""
+def _search_terms(session: Session, terms: list[str] | None = None) -> list[str]:
+    """The terms to search: the ones a search from the Search tab picked, or else the active
+    YouTube terms (what the CLI uses)."""
+    if terms is not None:
+        return terms
     return list(
         session.scalars(
-            select(Keyword).where(
+            select(Keyword.term).where(
                 Keyword.active, or_(Keyword.platform.is_(None), Keyword.platform == "youtube")
             )
         )
@@ -38,10 +41,13 @@ def _search_terms(session: Session) -> list[Keyword]:
 
 
 def _search_channel_ids(
-    session: Session, client: httpx.Client, settings: Settings, now: datetime
+    client: httpx.Client,
+    settings: Settings,
+    keywords: list[str],
+    now: datetime,
+    progress: runs.Progress | None = None,
 ) -> tuple[dict[str, str], int, int, str | None]:
-    """Search every active keyword. Returns (channel_id -> keyword, quota used, failures, error)."""
-    keywords = _search_terms(session)
+    """Search every keyword. Returns (channel_id -> keyword, quota used, failures, error)."""
     published_after = (now - timedelta(days=settings.lookback_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     # Spread the quota budget over the keywords: a few pages each, but at least one.
     searches_allowed = settings.youtube_discovery_quota // SEARCH_COST
@@ -50,14 +56,16 @@ def _search_channel_ids(
     found: dict[str, str] = {}
     quota = failures = 0
     last_error = None
-    for keyword in keywords:
+    for index, keyword in enumerate(keywords):
+        if progress:
+            progress(index, len(keywords))
         page_token = None
         for _ in range(pages):
             if quota + SEARCH_COST > settings.youtube_discovery_quota:
                 return found, quota, failures, last_error
             try:
                 data = search_videos(
-                    client, settings.youtube_api_key, keyword.term, published_after, page_token
+                    client, settings.youtube_api_key, keyword, published_after, page_token
                 )
             except ApiError as error:
                 failures += 1
@@ -67,7 +75,7 @@ def _search_channel_ids(
                 break  # skip the rest of this keyword
             quota += SEARCH_COST
             for item in data.get("items", []):
-                found.setdefault(item["snippet"]["channelId"], keyword.term)
+                found.setdefault(item["snippet"]["channelId"], keyword)
             page_token = data.get("nextPageToken")
             if not page_token:
                 break
@@ -168,16 +176,22 @@ def discover_youtube(
     settings: Settings,
     now: datetime | None = None,
     reviewer: GeminiReviewer | None = None,
+    terms: list[str] | None = None,
+    progress: runs.Progress | None = None,
 ) -> Run:
+    """Search YouTube for `terms` (default: the active search terms) and pick competitors."""
     now = now or datetime.now(UTC)
     run = runs.start_run(session, "discover", "youtube")
-    if not _search_terms(session):
+    keywords = _search_terms(session, terms)
+    if not keywords:
         # A fresh database has no terms: they are all added in the Sources tab.
         return runs.finish_run(
             session, run, status=runs.OK, message="no search terms: add some in the Sources tab"
         )
 
-    found, quota, failures, last_error = _search_channel_ids(session, client, settings, now)
+    found, quota, failures, last_error = _search_channel_ids(
+        client, settings, keywords, now, progress
+    )
 
     channels: list[dict] = []
     channel_ids = list(found)

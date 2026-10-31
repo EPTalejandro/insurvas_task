@@ -41,6 +41,17 @@ export function untilTime(iso: string, now: number = Date.now()): string {
   return `in ${Math.floor(hours / 24)}d`
 }
 
+/** "Nov 6, 7:30 PM" in the viewer's time zone */
+export function dateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+/** The value a datetime-local input expects ("2026-11-06T19:30"), in local time. */
+export function localInputValue(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
 /** "Nov 6" */
 export function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -82,4 +93,9 @@ export const LOCATION_LABELS: Record<string, { text: string; tone: 'yes' | 'mayb
   probable_us: { text: 'Probable US', tone: 'maybe' },
   unverified: { text: 'Unverified', tone: 'unknown' },
   non_us: { text: 'Non-US', tone: 'no' },
+}
+
+/** A run or step status as a dot colour: green ok, amber partial, red error, grey otherwise. */
+export function statusTone(status: string): string {
+  return status === 'ok' ? 'yes' : status === 'partial' ? 'maybe' : status === 'error' ? 'no' : 'unknown'
 }

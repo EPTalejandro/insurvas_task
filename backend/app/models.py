@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -185,3 +185,43 @@ class Run(Base):
     hashtags: Mapped[str | None]
     started_at: Mapped[datetime] = mapped_column(default=utcnow)
     finished_at: Mapped[datetime | None]
+
+
+class Job(Base):
+    """A search started from the Search tab: now, or at a set time. Its steps run in order."""
+
+    __tablename__ = "jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(index=True)  # scheduled | running | ok | partial | error
+    run_at: Mapped[datetime]  # when it should start (UTC)
+    # The terms picked for this search, copied, so editing keywords later does not change it.
+    youtube_terms: Mapped[list[str]] = mapped_column(JSON, default=list)
+    hashtags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    message: Mapped[str | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    started_at: Mapped[datetime | None]
+    finished_at: Mapped[datetime | None]
+
+    steps: Mapped[list["JobStep"]] = relationship(
+        back_populates="job", cascade="all, delete-orphan", order_by="JobStep.position"
+    )
+
+
+class JobStep(Base):
+    """One step of a search, with its progress: one bar in the Search tab."""
+
+    __tablename__ = "job_steps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
+    position: Mapped[int]
+    step: Mapped[str]  # a key of app.jobs.STEPS
+    # pending | running | ok | partial | error | skipped
+    status: Mapped[str] = mapped_column(default="pending")
+    done: Mapped[int | None]
+    total: Mapped[int | None]  # None until the step knows how many items it has
+    detail: Mapped[str | None]  # which part of the step is running, e.g. "linking"
+    message: Mapped[str | None]  # the result, from the step's run
+
+    job: Mapped[Job] = relationship(back_populates="steps")

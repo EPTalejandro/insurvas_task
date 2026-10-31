@@ -24,7 +24,7 @@ export async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-/** A change (only keywords can be changed). Returns the answer, or null for 204 No Content. */
+/** A change (keywords and searches). Returns the answer, or null for 204 No Content. */
 export async function sendJson<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T | null> {
   const response = await fetch(path, {
     method,
@@ -62,9 +62,14 @@ export const metaUrl = '/api/meta'
 export const runsUrl = '/api/runs?limit=12'
 export const keywordsUrl = '/api/keywords'
 export const hashtagBudgetUrl = '/api/hashtag-budget'
+export const jobsUrl = '/api/jobs'
 
 export function keywordUrl(id: number): string {
   return `${keywordsUrl}/${id}`
+}
+
+export function jobUrl(id: number): string {
+  return `${jobsUrl}/${id}`
 }
 
 export function postsUrl(q: PostsQuery): string {

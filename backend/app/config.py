@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # Instagram hashtag top posts come 15 per page and each page is slow (12-26 s).
     hashtag_max_pages: int = 8
 
+    # Run scheduled searches from the Search tab in a thread of the API server.
+    scheduler_enabled: bool = True
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

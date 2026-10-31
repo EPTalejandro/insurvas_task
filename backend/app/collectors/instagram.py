@@ -168,20 +168,34 @@ def _read_top_media(
 
 
 def collect_hashtags(
-    session: Session, client: httpx.Client, settings: Settings, now: datetime | None = None
+    session: Session,
+    client: httpx.Client,
+    settings: Settings,
+    now: datetime | None = None,
+    terms: list[str] | None = None,
+    progress: runs.Progress | None = None,
 ) -> Run:
+    """Top posts of `terms` (default: the active hashtags, what the CLI uses)."""
     now = now or datetime.now(UTC)
     cutoff = now - timedelta(days=settings.lookback_days)
     run = runs.start_run(session, "collect", "instagram")
-    keywords = session.scalars(
-        select(Keyword).where(Keyword.active, Keyword.platform == "instagram")
-    ).all()
+    keywords = (
+        terms
+        if terms is not None
+        else list(
+            session.scalars(
+                select(Keyword.term).where(Keyword.active, Keyword.platform == "instagram")
+            )
+        )
+    )
 
     ok = failed = saved = 0
     last_error = None
     searched: list[str] = []  # each one takes a weekly hashtag slot, found or not
-    for keyword in keywords:
-        tag = keyword.term.lstrip("#")
+    for index, keyword in enumerate(keywords):
+        if progress:
+            progress(index, len(keywords))
+        tag = keyword.lstrip("#")
         try:
             hashtag_id = search_hashtag_id(client, settings, tag)
         except ApiError as error:

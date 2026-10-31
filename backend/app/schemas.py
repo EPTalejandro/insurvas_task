@@ -255,3 +255,35 @@ class HashtagBudgetOut(BaseModel):
     free: int
     next_free_at: datetime | None
     slots: list[HashtagSlotOut]  # soonest to free first
+
+
+class JobIn(BaseModel):
+    """A new search. run_at None means "start now"; the terms are used by discover / hashtags."""
+
+    steps: list[str] = Field(max_length=10)
+    run_at: datetime | None = None
+    youtube_terms: list[str] = Field(default_factory=list, max_length=100)
+    hashtags: list[str] = Field(default_factory=list, max_length=100)
+
+
+class JobStepOut(BaseModel):
+    step: str
+    label: str
+    status: str  # pending | running | ok | partial | error | skipped
+    done: int | None
+    total: int | None  # None: the step has not counted its items yet
+    detail: str | None
+    message: str | None
+
+
+class JobOut(BaseModel):
+    id: int
+    status: str  # scheduled | running | ok | partial | error
+    run_at: datetime
+    youtube_terms: list[str]
+    hashtags: list[str]
+    message: str | None
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    steps: list[JobStepOut]

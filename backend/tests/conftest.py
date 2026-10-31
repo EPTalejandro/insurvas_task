@@ -2,6 +2,8 @@ import os
 
 # Keep tests away from the real database file (the app lifespan calls init_db()).
 os.environ["DATABASE_URL"] = "sqlite://"
+# Never run searches in a background thread during tests.
+os.environ["SCHEDULER_ENABLED"] = "0"
 
 import pytest
 from fastapi.testclient import TestClient

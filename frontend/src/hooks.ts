@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getJson } from './api.ts'
 
 interface Result<T> {
@@ -43,4 +43,17 @@ export function useFetch<T>(url: string): {
       setAttempt((n) => n + 1)
     },
   }
+}
+
+/** Call `callback` every `ms` milliseconds; null pauses it. The latest callback is always used. */
+export function useInterval(callback: () => void, ms: number | null): void {
+  const latest = useRef(callback)
+  useEffect(() => {
+    latest.current = callback
+  })
+  useEffect(() => {
+    if (ms === null) return
+    const id = window.setInterval(() => latest.current(), ms)
+    return () => window.clearInterval(id)
+  }, [ms])
 }

@@ -13,7 +13,7 @@ function RunsTable() {
     <div aria-busy={loading}>
       {error && <ErrorBox message={error} onRetry={reload} />}
       {!error && !data && <Loading what="Loading runs" />}
-      {data && data.length === 0 && <p>Nothing has run yet. Use the command line: refresh --discover.</p>}
+      {data && data.length === 0 && <p>Nothing has run yet. Start one in the Search tab.</p>}
       {data && data.length > 0 && (
         <div className="table-wrap">
           <table>
@@ -198,8 +198,8 @@ function SearchTerms() {
     <section aria-busy={keywords.loading}>
       <h3>Search terms</h3>
       <p className="summary">
-        Changes are used on the next pipeline run: <code>make refresh DISCOVER=1</code> for YouTube search terms,{' '}
-        <code>make refresh</code> for hashtags.
+        Active terms are pre-checked in a new search (Search tab) and used by <code>make refresh</code>{' '}
+        (YouTube terms only with <code>DISCOVER=1</code>).
       </p>
       {keywords.error && <ErrorBox message={keywords.error} onRetry={reloadAll} />}
       {!keywords.error && !keywords.data && <Loading what="Loading search terms" />}

@@ -5,9 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app import scheduler
 from app.config import get_settings
 from app.db import init_db
-from app.routers import competitors, insights, meta, posts, sources
+from app.routers import competitors, insights, jobs, meta, posts, sources
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -15,7 +16,12 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    run_scheduler = get_settings().scheduler_enabled
+    if run_scheduler:
+        scheduler.start()
     yield
+    if run_scheduler:
+        scheduler.stop()
 
 
 app = FastAPI(title="Competitor Content Intelligence", version="0.1.0", lifespan=lifespan)
@@ -23,14 +29,14 @@ app = FastAPI(title="Competitor Content Intelligence", version="0.1.0", lifespan
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
-    # Writes exist only for keywords. Their JSON bodies need a preflight, so a page from another
-    # origin cannot change them from a browser.
+    # Writes exist only for keywords and searches. Their JSON bodies need a preflight, so a page
+    # from another origin cannot change them from a browser.
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
 
-for module in (meta, posts, competitors, insights, sources):
+for module in (meta, posts, competitors, insights, sources, jobs):
     app.include_router(module.router, prefix="/api")
 
 

@@ -74,7 +74,9 @@ def load_inputs(
     return inputs, labels, competitor_of
 
 
-def rank_all(session: Session, now: datetime | None = None) -> Run:
+def rank_all(
+    session: Session, now: datetime | None = None, progress: runs.Progress | None = None
+) -> Run:
     now = now or datetime.now(UTC)
     run = runs.start_run(session, "rank")
     try:
@@ -84,7 +86,9 @@ def rank_all(session: Session, now: datetime | None = None) -> Run:
 
         summary = []
         post_rows = competitor_rows = 0
-        for window in config.WINDOWS:
+        for index, window in enumerate(config.WINDOWS):
+            if progress:
+                progress(index, len(config.WINDOWS))
             results = score_posts(inputs, window, now)
             session.add_all(
                 PostScore(

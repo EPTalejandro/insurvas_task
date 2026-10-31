@@ -214,3 +214,27 @@ export interface HashtagBudget {
   next_free_at: string | null
   slots: { tag: string; frees_at: string }[]
 }
+
+// A search started from the Search tab. Each step is one progress bar.
+export interface JobStep {
+  step: string
+  label: string
+  status: string // pending | running | ok | partial | error | skipped
+  done: number | null
+  total: number | null // null: the step has not counted its items yet
+  detail: string | null
+  message: string | null
+}
+
+export interface Job {
+  id: number
+  status: string // scheduled | running | ok | partial | error
+  run_at: string
+  youtube_terms: string[]
+  hashtags: string[]
+  message: string | null
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  steps: JobStep[]
+}

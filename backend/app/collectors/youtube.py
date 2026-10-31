@@ -83,7 +83,11 @@ def fetch_videos(client: httpx.Client, api_key: str, video_ids: list[str]) -> li
 
 
 def collect_youtube(
-    session: Session, client: httpx.Client, settings: Settings, now: datetime | None = None
+    session: Session,
+    client: httpx.Client,
+    settings: Settings,
+    now: datetime | None = None,
+    progress: runs.Progress | None = None,
 ) -> Run:
     """Collect recent uploads of every active competitor's YouTube channel.
 
@@ -104,7 +108,9 @@ def collect_youtube(
 
     accounts_ok = accounts_failed = posts = quota = 0
     last_error = None
-    for creator in creators:
+    for index, creator in enumerate(creators):
+        if progress:
+            progress(index, len(creators))
         playlist_id = uploads_playlist_id(creator.external_id)
         try:
             if playlist_id is None:

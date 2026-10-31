@@ -1,13 +1,14 @@
 // The URL is the app's state: reload or share it and you get the same view. No router needed.
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
-export type Tab = 'content' | 'competitors' | 'insights' | 'sources'
+export type Tab = 'content' | 'competitors' | 'insights' | 'search' | 'sources'
 export type GroupBy = 'hook_type' | 'topic' | 'format'
 
 export const TABS: { id: Tab; label: string }[] = [
   { id: 'content', label: 'Top content' },
   { id: 'competitors', label: 'Competitors' },
   { id: 'insights', label: 'Insights' },
+  { id: 'search', label: 'Search' },
   { id: 'sources', label: 'Sources' },
 ]
 export const GROUPS: { id: GroupBy; label: string }[] = [
