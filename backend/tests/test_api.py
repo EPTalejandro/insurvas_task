@@ -562,3 +562,52 @@ def test_a_running_step_shows_its_live_progress(client, session):
         jobs._live.clear()
 
     assert (step["done"], step["total"]) == (40, 120)
+
+
+# --- seen posts ----------------------------------------------------------------------------------
+
+
+def test_opening_a_post_moves_it_from_new_to_seen(client, data):
+    first = client.get("/api/posts").json()["items"][0]
+
+    assert client.put(f"/api/posts/{first['id']}/seen").status_code == 204
+
+    unseen = client.get("/api/posts", params={"seen": "false"}).json()
+    seen = client.get("/api/posts", params={"seen": "true"}).json()
+    assert first["id"] not in ids(unseen)
+    assert ids(seen) == [first["id"]]
+    assert seen["items"][0]["seen_at"] is not None
+    # Without the parameter nothing changes: seen and unseen posts together.
+    assert first["id"] in ids(client.get("/api/posts").json())
+
+
+def test_seeing_a_post_again_keeps_the_first_time(client, data):
+    post_id = client.get("/api/posts").json()["items"][0]["id"]
+    client.put(f"/api/posts/{post_id}/seen")
+    first_time = client.get("/api/posts", params={"seen": "true"}).json()["items"][0]["seen_at"]
+
+    client.put(f"/api/posts/{post_id}/seen")
+
+    again = client.get("/api/posts", params={"seen": "true"}).json()["items"][0]["seen_at"]
+    assert again == first_time
+
+
+def test_undo_puts_the_post_back_in_new(client, data):
+    post_id = client.get("/api/posts").json()["items"][0]["id"]
+    client.put(f"/api/posts/{post_id}/seen")
+
+    assert client.delete(f"/api/posts/{post_id}/seen").status_code == 204
+
+    assert post_id in ids(client.get("/api/posts", params={"seen": "false"}).json())
+    assert client.get("/api/posts", params={"seen": "true"}).json()["total"] == 0
+
+
+@pytest.mark.parametrize("method", ["put", "delete"])
+def test_seen_needs_a_real_post(client, data, method):
+    assert getattr(client, method)("/api/posts/999999/seen").status_code == 404
+    assert getattr(client, method)(f"/api/posts/{2**63}/seen").status_code == 422
+
+
+def test_marking_seen_is_not_a_simple_cross_site_request(client):
+    # A bodyless POST would skip the CORS preflight; the route only accepts PUT and DELETE.
+    assert client.post("/api/posts/1/seen").status_code == 405

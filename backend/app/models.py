@@ -21,10 +21,13 @@ class Competitor(Base):
     name: Mapped[str]
     kind: Mapped[str]  # agent | agency
     website: Mapped[str | None]
-    # Only "active" competitors are collected and ranked. "candidate" waits for review.
+    # Only "active" competitors are collected and ranked. "candidate" waits for a free slot.
+    # "excluded" is final: carriers, and active ones with no ranked post in 30 days.
     status: Mapped[str] = mapped_column(index=True)  # active | candidate | excluded
     discovery_score: Mapped[float | None]
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # When it last became active: a competitor is judged on its content only after that.
+    activated_at: Mapped[datetime | None]
 
     creators: Mapped[list["Creator"]] = relationship(back_populates="competitor")
 
@@ -83,6 +86,8 @@ class Post(Base):
     shares: Mapped[int | None]
 
     last_collected_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # When someone first opened its link from Top content. None: not seen yet.
+    seen_at: Mapped[datetime | None] = mapped_column(index=True)
 
     # Only set for posts whose author is unknown (hashtag results): we judge the caption instead.
     location_status: Mapped[str | None]  # likely_us | probable_us | unverified | non_us

@@ -52,6 +52,7 @@ class PostFilters:
     hook_type: str | None = None
     format: str | None = None
     competitor_id: int | None = None
+    seen: bool | None = None  # None: seen and unseen posts
 
 
 def post_filters(
@@ -60,6 +61,7 @@ def post_filters(
     hook_type: str | None = Query(None),
     format: str | None = Query(None),
     competitor_id: int | None = Query(None, le=MAX_INT),
+    seen: bool | None = Query(None),
 ) -> PostFilters:
     return PostFilters(
         platform=choice(platform, PLATFORMS, "platform"),
@@ -67,6 +69,7 @@ def post_filters(
         hook_type=choice(hook_type, HOOKS, "hook_type"),
         format=choice(format, FORMAT_GROUPS, "format"),
         competitor_id=competitor_id,
+        seen=seen,
     )
 
 
@@ -94,6 +97,8 @@ def apply_filters(stmt: Select, filters: PostFilters) -> Select:
         stmt = stmt.where(Post.format.in_(FORMAT_GROUPS[filters.format][1]))
     if filters.competitor_id is not None:
         stmt = stmt.where(Creator.competitor_id == filters.competitor_id)
+    if filters.seen is not None:
+        stmt = stmt.where(Post.seen_at.is_not(None) if filters.seen else Post.seen_at.is_(None))
     return stmt
 
 
@@ -199,4 +204,5 @@ def to_post_out(post: Post, creator: Creator, label: Label | None, score: PostSc
             reason=score.reason,
         ),
         location=location_of(post, creator),
+        seen_at=utc(post.seen_at),
     )

@@ -63,7 +63,10 @@ discover -> collect -> label -> rank -> the UI reads the database
 ```
 
 1. **discover** searches YouTube for each search term, classifies the channels (agent, agency,
-   carrier), keeps only the US-based ones, and picks the top competitors.
+   carrier), keeps only the US-based ones, and picks the top competitors (up to
+   `MAX_COMPETITORS`). Active competitors with no ranked post in the last 30 days are excluded
+   first, so their slots go to the best new candidates. A new competitor is only judged after
+   one collect and rank.
 2. **collect** reads the last 90 days of posts: YouTube videos of the competitors, the Instagram
    accounts we could link to them, and the top posts of each Instagram hashtag.
 3. **label** gives each post a topic, hook, call to action and a relevance flag (Gemini, or the
@@ -117,7 +120,8 @@ Interactive docs at http://localhost:8000/docs. All data endpoints take `window=
 | Endpoint | What it gives |
 |---|---|
 | `GET /api/meta` | windows, platforms, taxonomy, thresholds, counts, last update |
-| `GET /api/posts` | ranked posts: `platform`, `topic`, `hook_type`, `format`, `competitor_id`, `limit`, `offset` |
+| `GET /api/posts` | ranked posts: `platform`, `topic`, `hook_type`, `format`, `competitor_id`, `seen` (true/false), `limit`, `offset` |
+| `PUT`/`DELETE /api/posts/{id}/seen` | mark a post as seen (opening its link does it) or undo it |
 | `GET /api/competitors` | leaderboard; `include_low_sample` shows competitors with few posts |
 | `GET /api/competitors/{id}` | one competitor: accounts, scores per window, top posts |
 | `GET /api/insights` | average score per `group_by=hook_type`, `topic` or `format`, optional `platform` |
@@ -142,7 +146,8 @@ images).
 
 ## Frontend
 
-The UI has five tabs: **Top content** (ranked posts with filters), **Competitors** (leaderboard and
+The UI has five tabs: **Top content** (ranked posts with filters, split into New and Seen: opening
+a post's link moves it to Seen), **Competitors** (leaderboard and
 a page per competitor), **Insights** (average score per hook, topic or format), **Search** (run a
 search now or at a set time, pick its steps and terms, and watch one progress bar per step) and
 **Sources**
@@ -169,6 +174,12 @@ terminals. Frontend commands, from `frontend/`: `pnpm dev`, `pnpm lint`, `pnpm b
 - **Instagram allows 30 different hashtags per 7 days.** Each hashtag run records the hashtags it
   searched (`runs.hashtags`); the Sources tab counts the slots from that. A database made before
   this column existed needs `ALTER TABLE runs ADD COLUMN hashtags VARCHAR;`.
+- **Older databases** also need, for competitor rotation and seen posts:
+  `ALTER TABLE competitors ADD COLUMN activated_at DATETIME;`,
+  `UPDATE competitors SET activated_at = created_at WHERE status = 'active';` and
+  `ALTER TABLE posts ADD COLUMN seen_at DATETIME;`.
+- **Excluded competitors do not come back.** Once a competitor is excluded (carrier, or no
+  ranked post in 30 days), discover never makes it active again.
 
 ## Tests
 

@@ -395,6 +395,13 @@ td .flags { display: flex; flex-wrap: wrap; gap: 0.1rem 0.9rem; margin-top: 0.25
 .bar-value { grid-area: value; text-align: right; font-family: var(--display); font-size: 2rem; font-weight: 800; line-height: 1; }
 .bar-meta { grid-area: meta; font-size: 0.875rem; color: var(--slate); }
 
+/* ---- seen posts (Top content) ---- */
+.view-switch { margin-bottom: 0.75rem; }
+.seen-line { display: flex; flex-wrap: wrap; gap: 0.1rem 0.75rem; margin: 0.5rem 0 0; font-size: 0.875rem; color: var(--slate); }
+/* A card that just moved to the other view: faded, but its Undo stays fully readable. */
+.post.is-seen > :not(.post-body),
+.post.is-seen .post-body > :not(.seen-line) { opacity: 0.45; transition: opacity 0.2s; }
+
 /* ---- search: steps to pick, then one bar per running step ---- */
 .visually-hidden {
   position: absolute;

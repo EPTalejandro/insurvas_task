@@ -3,6 +3,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
 export type Tab = 'content' | 'competitors' | 'insights' | 'search' | 'sources'
 export type GroupBy = 'hook_type' | 'topic' | 'format'
+export type View = 'new' | 'seen' // Top content: posts not opened yet, or already opened
 
 export const TABS: { id: Tab; label: string }[] = [
   { id: 'content', label: 'Top content' },
@@ -27,6 +28,7 @@ export interface UrlState {
   format: string
   competitor: number | null
   group_by: GroupBy
+  view: View
 }
 
 export function parseSearch(search: string): UrlState {
@@ -42,6 +44,7 @@ export function parseSearch(search: string): UrlState {
     format: params.get('format') ?? '',
     competitor: Number.isInteger(competitor) && competitor > 0 ? competitor : null,
     group_by: GROUPS.find((g) => g.id === params.get('group_by'))?.id ?? 'hook_type',
+    view: params.get('view') === 'seen' ? 'seen' : 'new',
   }
 }
 
@@ -50,7 +53,7 @@ export function parseSearch(search: string): UrlState {
  * one tab, and carried over they would filter the next tab without the user seeing why.
  */
 export function tabPatch(tab: Tab): Partial<UrlState> {
-  return { tab, topic: '', hook_type: '', format: '', competitor: null, group_by: 'hook_type' }
+  return { tab, topic: '', hook_type: '', format: '', competitor: null, group_by: 'hook_type', view: 'new' }
 }
 
 /** Only values that differ from the defaults go in the URL, so it stays short. */
@@ -64,6 +67,7 @@ export function toSearch(state: UrlState): string {
   if (state.format) params.set('format', state.format)
   if (state.competitor !== null) params.set('competitor', String(state.competitor))
   if (state.group_by !== 'hook_type') params.set('group_by', state.group_by)
+  if (state.view !== 'new') params.set('view', state.view)
   const text = params.toString()
   return text ? `?${text}` : window.location.pathname
 }

@@ -77,6 +77,7 @@ class PostOut(BaseModel):
     label: LabelOut | None
     score: ScoreOut
     location: LocationOut
+    seen_at: datetime | None  # when its link was first opened from Top content
 
 
 # --- /api/posts ----------------------------------------------------------------------------

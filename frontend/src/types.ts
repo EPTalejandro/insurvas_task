@@ -70,6 +70,7 @@ export interface Post {
   label: Label | null
   score: Score
   location: Location
+  seen_at: string | null // when its link was first opened from Top content
 }
 
 export interface PostsPage {

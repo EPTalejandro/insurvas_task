@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.config import Settings
 from app.discovery.discover import discover_youtube
-from app.models import Competitor, Creator, Keyword, Run
+from app.models import Competitor, CompetitorScore, Creator, Keyword, Run
 from tests.youtube_fake import FORBIDDEN_BODY, QUOTA_BODY, FakeYouTube
 
 NOW = datetime(2026, 10, 24, 12, 0, tzinfo=UTC)
@@ -302,3 +302,80 @@ def test_gemini_cannot_bring_back_a_non_us_channel(session):
 
     mumbai = session.scalars(select(Creator).where(Creator.name == "Mumbai Team")).one()
     assert (mumbai.country, mumbai.is_relevant) == ("IN", False)
+
+
+# --- rotation: quiet competitors make room ----------------------------------------------------
+
+
+def add_active(session, name: str, *, ranked: bool) -> Competitor:
+    """An active competitor from September, with or without a ranked post in 30 days."""
+    competitor = Competitor(
+        name=name, kind="agent", status="active", activated_at=datetime(2026, 9, 1)
+    )
+    session.add(competitor)
+    session.flush()
+    if ranked:
+        session.add(
+            CompetitorScore(competitor_id=competitor.id, window_days=30, score=60, posts_count=5)
+        )
+    session.commit()
+    return competitor
+
+
+def add_collect_and_rank(session) -> None:
+    """A collect then a rank after both competitors were activated."""
+    for kind, hour in (("collect", 1), ("rank", 2)):
+        started = datetime(2026, 10, 20, hour)
+        session.add(Run(kind=kind, status="ok", started_at=started, finished_at=started))
+    session.commit()
+
+
+def test_a_quiet_competitor_is_excluded_and_its_slot_refilled(session):
+    add_keywords(session, "life insurance agent")
+    quiet = add_active(session, "Quiet Agent", ranked=False)
+    add_active(session, "Busy Agent", ranked=True)
+    add_collect_and_rank(session)
+
+    # Two slots, both taken: the quiet one makes room for the best candidate.
+    run = run_discover(session, FakeYouTube(), max_competitors=2)
+
+    status = {c.name: c.status for c in session.scalars(select(Competitor))}
+    assert status == {
+        "Quiet Agent": "excluded",
+        "Busy Agent": "active",
+        "Jane Doe - Final Expense Agent": "active",  # the best candidate takes the free slot
+        "Sunrise Insurance Agency": "candidate",
+    }
+    jane = session.scalars(select(Competitor).where(Competitor.name.startswith("Jane"))).one()
+    assert jane.activated_at.replace(tzinfo=UTC) == NOW
+    assert "1 excluded (no ranked post in 30 days); 1 activated" in run.message
+
+    # Excluded is final: a later discover with free slots does not bring it back.
+    run_discover(session, FakeYouTube(), max_competitors=10)
+    assert session.get(Competitor, quiet.id).status == "excluded"
+
+
+def test_without_any_30_day_scores_nobody_is_excluded(session):
+    add_keywords(session, "life insurance agent")
+    add_active(session, "Quiet Agent", ranked=False)
+    add_collect_and_rank(session)
+
+    run_discover(session, FakeYouTube(), max_competitors=3)
+
+    status = {c.name: c.status for c in session.scalars(select(Competitor))}
+    assert status["Quiet Agent"] == "active"
+
+
+def test_a_competitor_activated_after_the_last_rank_is_kept(session):
+    add_keywords(session, "life insurance agent")
+    add_active(session, "Busy Agent", ranked=True)
+    add_collect_and_rank(session)
+    fresh = Competitor(
+        name="Fresh Agent", kind="agent", status="active", activated_at=datetime(2026, 10, 23)
+    )
+    session.add(fresh)
+    session.commit()
+
+    run_discover(session, FakeYouTube(), max_competitors=3)
+
+    assert session.get(Competitor, fresh.id).status == "active"

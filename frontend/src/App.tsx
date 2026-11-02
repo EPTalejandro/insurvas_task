@@ -36,7 +36,8 @@ export default function App() {
     <AppContext.Provider value={{ meta, state, update, href }}>
       <main className="page">
         <Header />
-        {state.tab === 'content' && <TopContent />}
+        {/* New and Seen are different lists, so switching starts fresh instead of relabelling the old one. */}
+        {state.tab === 'content' && <TopContent key={state.view} />}
         {state.tab === 'competitors' && <Competitors />}
         {state.tab === 'insights' && <Insights />}
         {state.tab === 'search' && <Search />}

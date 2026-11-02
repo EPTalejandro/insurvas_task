@@ -19,9 +19,14 @@ from app.config import Settings
 from app.discovery.classify import classify_creator
 from app.discovery.gemini_review import CreatorBrief, GeminiReviewer
 from app.discovery.location import NON_US, assess_location
-from app.discovery.selection import choose_new_active, discovery_score
+from app.discovery.selection import (
+    STALE_WINDOW,
+    choose_new_active,
+    discovery_score,
+    stale_competitors,
+)
 from app.httpclient import ApiError
-from app.models import Competitor, Creator, Keyword, Run
+from app.models import Competitor, CompetitorScore, Creator, Keyword, Run
 
 MAX_PAGES_PER_KEYWORD = 3
 
@@ -151,8 +156,54 @@ def _link_competitors(session: Session, creators: list[Creator]) -> None:
     session.flush()
 
 
-def _activate_best_candidates(session: Session, max_competitors: int) -> None:
-    """Keep the active competitors and fill the free slots with the best-scoring candidates."""
+def _judged_since(session: Session) -> datetime | None:
+    """Start of the latest collect that the latest rank could see, or None if there is none.
+
+    A competitor activated before this moment had its posts collected and then ranked.
+    """
+    finished = Run.status.in_((runs.OK, runs.PARTIAL))
+    last_rank = session.scalar(
+        select(Run.started_at).where(Run.kind == "rank", finished).order_by(Run.id.desc())
+    )
+    if last_rank is None:
+        return None
+    return session.scalar(
+        select(Run.started_at)
+        .where(Run.kind == "collect", finished, Run.started_at <= last_rank)
+        .order_by(Run.started_at.desc())
+    )
+
+
+def _drop_stale(session: Session, active: list[Competitor]) -> list[Competitor]:
+    """Exclude active competitors with no ranked post in the last 30 days. Returns them."""
+    with_ranked_posts = set(
+        session.scalars(
+            select(CompetitorScore.competitor_id).where(CompetitorScore.window_days == STALE_WINDOW)
+        )
+    )
+    if not with_ranked_posts:
+        # No 30-day scores at all means rank has not run (or was wiped), not that everyone is
+        # quiet: excluding now would empty the whole list.
+        return []
+    stale = set(
+        stale_competitors(
+            [(c.id, c.activated_at) for c in active], with_ranked_posts, _judged_since(session)
+        )
+    )
+    dropped = [c for c in active if c.id in stale]
+    for competitor in dropped:
+        competitor.status = "excluded"
+    return dropped
+
+
+def _activate_best_candidates(
+    session: Session, max_competitors: int, now: datetime
+) -> tuple[int, int]:
+    """Drop stale active competitors, then fill the free slots with the best candidates.
+
+    Returns (excluded, activated). Excluded competitors never come back, so a quiet account
+    cannot bounce between active and candidate on every discover.
+    """
     competitors = session.scalars(
         select(Competitor).where(Competitor.status.in_(("active", "candidate")))
     ).all()
@@ -162,12 +213,16 @@ def _activate_best_candidates(session: Session, max_competitors: int) -> None:
         competitor.discovery_score = discovery_score(followers, platforms)
 
     active = [c for c in competitors if c.status == "active"]
+    dropped = _drop_stale(session, active)
+    remaining = len(active) - len(dropped)
     candidates = [(c.id, c.discovery_score) for c in competitors if c.status == "candidate"]
-    chosen = set(choose_new_active(candidates, max_competitors - len(active)))
+    chosen = set(choose_new_active(candidates, max_competitors - remaining))
     for competitor in competitors:
         if competitor.id in chosen:
             competitor.status = "active"
+            competitor.activated_at = now
     session.commit()
+    return len(dropped), len(chosen)
 
 
 def discover_youtube(
@@ -211,7 +266,7 @@ def discover_youtube(
 
     creators = _upsert_creators(session, channels, found, reviewer)
     _link_competitors(session, creators)
-    _activate_best_candidates(session, settings.max_competitors)
+    excluded, activated = _activate_best_candidates(session, settings.max_competitors, now)
 
     relevant = sum(1 for creator in creators if creator.is_relevant)
     if failures == 0:
@@ -221,6 +276,10 @@ def discover_youtube(
     else:
         status = runs.ERROR
     message = f"{len(creators)} channels seen, {relevant} relevant"
+    if excluded:
+        message += f"; {excluded} excluded (no ranked post in {STALE_WINDOW} days)"
+    if activated:
+        message += f"; {activated} activated"
     if last_error:
         message += f"; last error: {last_error[:150]}"
     return runs.finish_run(

@@ -24,8 +24,8 @@ export async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-/** A change (keywords and searches). Returns the answer, or null for 204 No Content. */
-export async function sendJson<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T | null> {
+/** A change (keywords, searches, seen posts). Returns the answer, or null for 204 No Content. */
+export async function sendJson<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T | null> {
   const response = await fetch(path, {
     method,
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
@@ -54,6 +54,7 @@ export interface PostsQuery {
   hook_type: string
   format: string
   competitor: number | null
+  seen: boolean | null // null: seen and unseen posts
   limit: number
   offset: number
 }
@@ -68,6 +69,10 @@ export function keywordUrl(id: number): string {
   return `${keywordsUrl}/${id}`
 }
 
+export function postSeenUrl(id: number): string {
+  return `/api/posts/${id}/seen`
+}
+
 export function jobUrl(id: number): string {
   return `${jobsUrl}/${id}`
 }
@@ -80,6 +85,7 @@ export function postsUrl(q: PostsQuery): string {
     hook_type: q.hook_type,
     format: q.format,
     competitor_id: q.competitor,
+    seen: q.seen,
     limit: q.limit,
     offset: q.offset,
   })}`

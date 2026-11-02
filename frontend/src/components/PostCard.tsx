@@ -47,20 +47,36 @@ function Thumb({ post }: { post: Post }) {
   )
 }
 
+/**
+ * Top content's seen state for one card. `onOpen` runs when the post's link is opened; `note`
+ * and `action` describe the line under the card (none when `note` is null); `dimmed` marks a
+ * card that has already moved to the other view but stays in place until the list reloads.
+ */
+export interface SeenControl {
+  onOpen: () => void
+  note: string | null
+  action: string
+  onAction: () => void
+  dimmed: boolean
+}
+
 /** `lead` is the best post of a list: it gets the biggest numeral. */
-export function PostCard({ post, lead = false }: { post: Post; lead?: boolean }) {
+export function PostCard({ post, lead = false, seen }: { post: Post; lead?: boolean; seen?: SeenControl }) {
   const { meta } = useApp()
   const hook = post.title ?? post.label?.hook_text ?? post.text_preview ?? '(no text)'
   const platform = meta.platforms.find((p) => p.id === post.platform)?.label ?? post.platform
   const { label } = post
+  // A left click and a middle click both open the link in a new tab, so both count as seen.
+  const opened = seen ? { onClick: seen.onOpen, onAuxClick: seen.onOpen } : {}
+  const classes = ['post', lead && 'post-lead', seen?.dimmed && 'is-seen'].filter(Boolean).join(' ')
 
   return (
-    <article className={lead ? 'post post-lead' : 'post'}>
+    <article className={classes}>
       <ScoreBadge score={post.score.score} />
 
       <div className="post-body">
         <h3 className="post-title">
-          <a href={post.url} target="_blank" rel="noopener noreferrer">
+          <a href={post.url} target="_blank" rel="noopener noreferrer" {...opened}>
             {hook}
           </a>
         </h3>
@@ -107,9 +123,26 @@ export function PostCard({ post, lead = false }: { post: Post; lead?: boolean })
             </span>
           )}
         </p>
+
+        {seen?.note && (
+          <p className="seen-line">
+            <span>{seen.note}</span>
+            <button className="link-button" onClick={seen.onAction}>
+              {seen.action}
+            </button>
+          </p>
+        )}
       </div>
 
-      <a className="thumb" href={post.url} target="_blank" rel="noopener noreferrer" tabIndex={-1} aria-hidden="true">
+      <a
+        className="thumb"
+        href={post.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        tabIndex={-1}
+        aria-hidden="true"
+        {...opened}
+      >
         <Thumb key={post.thumbnail_url ?? post.id} post={post} />
       </a>
     </article>
