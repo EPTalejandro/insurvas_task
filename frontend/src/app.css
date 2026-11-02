@@ -170,9 +170,13 @@ select {
   border: 0;
   border-bottom: 1px solid var(--ink);
   border-radius: 0;
-  background-color: transparent;
+  /* The page colour, not transparent: Chrome paints the open list with the select's own
+     background, and transparent falls back to white under our light dark-mode text. */
+  background-color: var(--chalk);
+  color: var(--ink);
   box-shadow: none;
 }
+select option { background-color: var(--chalk); color: var(--ink); }
 select:disabled { opacity: 0.5; border-bottom-color: var(--rule); }
 
 /* ---- states ---- */
