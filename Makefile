@@ -17,7 +17,7 @@ build: ## Build the frontend (the API serves it from frontend/dist)
 	cd frontend && pnpm build
 
 run: build ## Build the frontend and serve app + API on http://localhost:8000
-	cd backend && uv run fastapi run app/main.py --port 8000
+	cd backend && uv run fastapi run app/main.py --host 127.0.0.1 --port 8000
 
 dev-api: ## Backend only, with reload, on :8000 (docs at /docs)
 	cd backend && uv run fastapi dev app/main.py
